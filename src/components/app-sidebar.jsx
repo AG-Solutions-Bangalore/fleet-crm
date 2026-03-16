@@ -91,14 +91,14 @@ const NAVIGATION_CONFIG = {
       isActive: false,
       icon: Package,
       items: [
-        {
-          title: "Report",
-          url: "/report",
-        },
-        {
-          title: "Driver Performance",
-          url: "/performance-driver-report",
-        },
+        // {
+        //   title: "Report",
+        //   url: "/report",
+        // },
+        // {
+        //   title: "Driver Performance",
+        //   url: "/performance-driver-report",
+        // },
         {
           title: "Performance New",
           url: "/performance-new",
