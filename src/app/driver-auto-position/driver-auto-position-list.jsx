@@ -62,8 +62,8 @@ const DriverAutoPositionList = () => {
 
   const [pageInput, setPageInput] = useState("");
   const storeCurrentPage = () => {
-    Cookies.set("driverAutoPositionReturnPage", (pagination.pageIndex + 1).toString(), { 
-      expires: 1 
+    Cookies.set("driverAutoPositionReturnPage", (pagination.pageIndex + 1).toString(), {
+      expires: 1
     });
   };
 
@@ -74,18 +74,13 @@ const DriverAutoPositionList = () => {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async ({ driver_push_date, driver_sl_no }) => {
+    mutationFn: async (id) => {
       const token = Cookies.get("token");
-      const formData = new FormData();
-      formData.append("driver_push_date", driver_push_date);
-      formData.append("driver_sl_no", driver_sl_no);
 
-      const response = await axios.post(
-        `${BASE_URL}/api/driver-auto-position-delete`,
-        formData,
+      const response = await axios.delete(
+        `${BASE_URL}/api/driver-auto-position/${id}`,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${token}`,
           },
         }
@@ -113,12 +108,9 @@ const DriverAutoPositionList = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (selectedPosition) {
-      deleteMutation.mutate({
-        driver_push_date: selectedPosition.driver_push_date,
-        driver_sl_no: selectedPosition.driver_sl_no,
-      });
+  const confirmDelete = (id) => {
+    if (id) {
+      deleteMutation.mutate(id);
     }
   };
 
@@ -126,7 +118,7 @@ const DriverAutoPositionList = () => {
     const savedPage = Cookies.get("driverAutoPositionReturnPage");
     if (savedPage) {
       Cookies.remove("driverAutoPositionReturnPage");
-      
+
       setTimeout(() => {
         const pageIndex = parseInt(savedPage) - 1;
         if (pageIndex >= 0) {
@@ -145,11 +137,11 @@ const DriverAutoPositionList = () => {
   useEffect(() => {
     const timerId = setTimeout(() => {
       const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-      
+
       if (isNewSearch) {
         setPagination(prev => ({ ...prev, pageIndex: 0 }));
       }
-      
+
       setDebouncedSearchTerm(searchTerm);
       setPreviousSearchTerm(searchTerm);
     }, 500);
@@ -172,7 +164,7 @@ const DriverAutoPositionList = () => {
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
-      
+
       if (debouncedSearchTerm) {
         params.append("search", debouncedSearchTerm);
       }
@@ -180,7 +172,7 @@ const DriverAutoPositionList = () => {
       const response = await axios.get(
         `${BASE_URL}/api/driver-auto-position?${params}`,
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
@@ -195,7 +187,7 @@ const DriverAutoPositionList = () => {
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = autoPositionsData?.last_page || 1;
-    
+
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
@@ -205,7 +197,7 @@ const DriverAutoPositionList = () => {
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
-          
+
           if (debouncedSearchTerm) {
             params.append("search", debouncedSearchTerm);
           }
@@ -213,7 +205,7 @@ const DriverAutoPositionList = () => {
           const response = await axios.get(
             `${BASE_URL}/api/driver-auto-position?${params}`,
             {
-              headers: { 
+              headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json"
               },
@@ -227,7 +219,7 @@ const DriverAutoPositionList = () => {
 
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-    
+
       if (!queryClient.getQueryData(["driver-auto-positions", debouncedSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
           queryKey: ["driver-auto-positions", debouncedSearchTerm, prevPage],
@@ -236,7 +228,7 @@ const DriverAutoPositionList = () => {
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
-            
+
             if (debouncedSearchTerm) {
               params.append("search", debouncedSearchTerm);
             }
@@ -244,7 +236,7 @@ const DriverAutoPositionList = () => {
             const response = await axios.get(
               `${BASE_URL}/api/driver-auto-position?${params}`,
               {
-                headers: { 
+                headers: {
                   Authorization: `Bearer ${token}`,
                   "Content-Type": "application/json"
                 },
@@ -294,7 +286,7 @@ const DriverAutoPositionList = () => {
     },
     {
       accessorKey: "driver_uuid",
-      id: "Driver UUID", 
+      id: "Driver UUID",
       header: "Driver UUID",
       cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("Driver UUID")}</div>,
       size: 200,
@@ -333,7 +325,7 @@ const DriverAutoPositionList = () => {
       cell: ({ row }) => {
         const outcome = row.getValue("Outcome");
         const getOutcomeColor = (outcome) => {
-          switch(outcome) {
+          switch (outcome) {
             case "Accepted": return "bg-green-100 text-green-800";
             case "Rejected": return "bg-red-100 text-red-800";
             default: return "bg-gray-100 text-gray-800";
@@ -507,7 +499,7 @@ const DriverAutoPositionList = () => {
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData(["driver-auto-positions", debouncedSearchTerm, targetPage]);
-    
+
     if (cachedData) {
       setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));
     } else {
@@ -518,7 +510,7 @@ const DriverAutoPositionList = () => {
   const handlePageInput = (e) => {
     const value = e.target.value;
     setPageInput(value);
-    
+
     if (value && !isNaN(value)) {
       const pageNum = parseInt(value);
       if (pageNum >= 1 && pageNum <= table.getPageCount()) {
@@ -531,7 +523,7 @@ const DriverAutoPositionList = () => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = table.getPageCount();
     const buttons = [];
-    
+
     buttons.push(
       <Button
         key={1}
@@ -587,16 +579,16 @@ const DriverAutoPositionList = () => {
 
   const TableShimmer = () => {
     return Array.from({ length: 10 }).map((_, index) => (
-      <TableRow key={index} className="animate-pulse h-11"> 
+      <TableRow key={index} className="animate-pulse h-11">
         {table.getVisibleFlatColumns().map((column) => (
           <TableCell key={column.id} className="py-1">
-            <div className="h-8 bg-gray-200 rounded w-full"></div> 
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
           </TableCell>
         ))}
       </TableRow>
     ));
   };
-  
+
   if (isError) {
     return (
       <div className="w-full p-4  ">
@@ -626,10 +618,11 @@ const DriverAutoPositionList = () => {
               {selectedPosition && (
                 <div className="mt-2 p-3 bg-muted rounded-md">
                   <p><span className="font-medium">Driver:</span> {selectedPosition.driver_name}</p>
-                  <p><span className="font-medium">Timestamp:</span> {selectedPosition.repositioning_timestamp}</p>
+                  <p><span className="font-medium">Timestamp:</span> {moment(selectedPosition.repositioning_timestamp).format("DD-MM-YYYY HH:mm:ss")}</p>
                   <p><span className="font-medium">Outcome:</span> {selectedPosition.repositioning_outcome}</p>
-                  <p><span className="font-medium">Push Date:</span> {selectedPosition.driver_push_date}</p>
-                  <p><span className="font-medium">SL No:</span> {selectedPosition.driver_sl_no}</p>
+                  <p><span className="font-medium">Distance(Km):</span> {Number(selectedPosition.actual_distance_travelled).toFixed(2)}</p>
+                  <p><span className="font-medium">Time:</span> {Number(selectedPosition.actual_time_travelled).toFixed(2)}</p>
+                  <p><span className="font-medium">Recommended(Km):</span> {Number(selectedPosition.recommended_distance).toFixed(2)}</p>
                 </div>
               )}
             </AlertDialogDescription>
@@ -637,7 +630,7 @@ const DriverAutoPositionList = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={() => confirmDelete(selectedPosition.id)}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
               disabled={deleteMutation.isPending}
             >
@@ -702,23 +695,23 @@ const DriverAutoPositionList = () => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead 
-                    key={header.id} 
+                  <TableHead
+                    key={header.id}
                     className="h-10 px-3 bg-[var(--team-color)] text-[var(--label-color)]  text-sm font-medium"
                     style={{ width: header.column.columnDef.size }}
                   >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
-          
+
           <TableBody>
             {isFetching && !table.getRowModel().rows.length ? (
               <TableShimmer />
@@ -740,7 +733,7 @@ const DriverAutoPositionList = () => {
                 </TableRow>
               ))
             ) : (
-              <TableRow className="h-12"> 
+              <TableRow className="h-12">
                 <TableCell colSpan={columns.length} className="h-24 text-center text-sm">
                   No driver auto positions found.
                 </TableCell>
@@ -755,7 +748,7 @@ const DriverAutoPositionList = () => {
           Showing {autoPositionsData?.from || 0} to {autoPositionsData?.to || 0} of{" "}
           {autoPositionsData?.total || 0} auto positions
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
@@ -766,7 +759,7 @@ const DriverAutoPositionList = () => {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <div className="flex items-center space-x-1">
             {generatePageButtons()}
           </div>

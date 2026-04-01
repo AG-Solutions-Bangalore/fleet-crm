@@ -26,9 +26,8 @@ import PenaltyList from "@/app/driver-penalty/penalty-list";
 import CreatePenalty from "@/app/driver-penalty/create-penalty";
 import EditPenalty from "@/app/driver-penalty/edit-penalty";
 import NewDriverPerformanceReport from "@/app/report/new-performance";
-// import PenaltyList from "@/app/driver-penalty/penalty-list";
-// import CreatePenalty from "@/app/driver-penalty/create-penalty";
-// import EditPenalty from "@/app/driver-penalty/edit-penalty";
+import DailyCashList from "@/app/daily-cash/daily-cash-list";
+const DriverQrList = lazy(() => import("@/app/driver-qr/driver-qr-list"));
 const Login = lazy(() => import("@/app/auth/login"));
 
 const NotFound = lazy(() => import("@/app/errors/not-found"));
@@ -105,6 +104,15 @@ function AppRoutes() {
           }
         />
 
+        <Route
+          path="/qr-drivers"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <DriverQrList />
+            </Suspense>
+          }
+        />
+
         {/* vehicle  */}
         <Route
           path="/vehicle"
@@ -157,6 +165,16 @@ function AppRoutes() {
           element={
             <Suspense fallback={<LoadingBar />}>
               <PaymentList />
+            </Suspense>
+          }
+        />
+
+        {/* daily cash */}
+        <Route
+          path="/daily-cash"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <DailyCashList />
             </Suspense>
           }
         />

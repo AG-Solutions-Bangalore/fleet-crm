@@ -89,44 +89,49 @@ const computeFleetRow = (driverName, rows, calcEngines) => {
   const { mbgEngine, revenueEngine, additionalEngine, otherEngine } =
     calcEngines;
 
-  const O = calcWeeklyAcceptance(rows);
-  const P = rows.reduce((acc, r) => acc + mbgEngine(r, category), 0);
-  const Q = calcTotalEarning(rows);
-  const R = revenueEngine(Q, category);
-  const S = additionalEngine(rows, category);
-  const T = calcTotalCollection(rows);
-  const U = rows.reduce(
+  const weeklyAcceptance = calcWeeklyAcceptance(rows);
+  const mbgTotal = rows.reduce((acc, r) => acc + mbgEngine(r, category), 0);
+  const totalEarnings = calcTotalEarning(rows);
+  const revenueIncentive = revenueEngine(totalEarnings, category);
+  const additionalIncentive = additionalEngine(rows, category);
+  const totalCashCollection = calcTotalCollection(rows);
+  const cashDeposited = rows.reduce(
     (acc, r) => acc + parseFloat(r.deposit_amount || 0),
     0,
   ); // Sum of daily deposits from API
-  const V = T + U; // Cash Balance
-  const W = P + R + S; // Total Payout
-  const X = W - V; // Payout After Adj
-  const Y = 0; // Credit
-  const Z =
+  const qrDeposited = rows.reduce(
+    (acc, r) => acc + (parseFloat(r.transaction_amount || 0) - parseFloat(r.discount_amount || 0)),
+    0,
+  );
+  const cashBalance = totalCashCollection - cashDeposited - qrDeposited; // Cash Balance = Collection - (Cash D + QR D)
+  const totalPayout = mbgTotal + revenueIncentive + additionalIncentive; // Total Payout
+  const payoutAfterAdj = totalPayout - cashBalance; // Payout After Adj
+  const credit = 0; // Credit
+  const debit =
     otherEngine(rows, category) +
     rows.reduce((acc, r) => acc + parseFloat(r.penalty_amount || 0), 0); // Dynamic penalties + API penalty_amount
-  const AA = calcCustomerTrips(rows);
-  const AB = calcFinalPayout(X, Y, AA, Z);
+  const customerTripsTip = calcCustomerTrips(rows);
+  const finalPayout = calcFinalPayout(payoutAfterAdj, credit, customerTripsTip, debit);
 
   return {
     driverName,
     rows,
     category,
-    O,
-    P,
-    Q,
-    R,
-    S,
-    T,
-    U,
-    V,
-    W,
-    X,
-    Y,
-    Z,
-    AA,
-    AB,
+    weeklyAcceptance,
+    mbgTotal,
+    totalEarnings,
+    revenueIncentive,
+    additionalIncentive,
+    totalCashCollection,
+    cashDeposited,
+    qrDeposited,
+    cashBalance,
+    totalPayout,
+    payoutAfterAdj,
+    credit,
+    debit,
+    customerTripsTip,
+    finalPayout,
   };
 };
 
@@ -155,7 +160,8 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                 <th className="border p-2 text-right">Daily Earning</th>
                 <th className="border p-2 text-right">Cash Collection</th>
                 <th className="border p-2 text-right">Daily MBG</th>
-                <th className="border p-2 text-right">Deposit</th>
+                <th className="border p-2 text-right">Cash D</th>
+                <th className="border p-2 text-right">Qr D</th>
                 <th className="border p-2 text-left">Conditions Met</th>
               </tr>
             </thead>
@@ -165,6 +171,8 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                 const earning = parseFloat(r.total_earings || 0);
                 const hours = parseFloat(r.hours_online || 0);
                 const conf = parseFloat(r.confirmation_rate || 0);
+                const cashDepositRow = parseFloat(r.deposit_amount || 0);
+                const qrDepositRow = parseFloat(r.transaction_amount - r.discount_amount || 0);
 
                 // Track which thresholds are met
                 const failedRules = thresholdRules.filter((rule) => {
@@ -180,7 +188,7 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                     className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
                   >
                     <td className="border p-2">
-                      {moment(r.performance_date).format("DD-MM-YYYY") || "—"}
+                       {moment(r.performance_date).format("DD-MM-YYYY") || "—"}
                     </td>
                     <td className="border p-2 text-right">
                       {hours.toFixed(2)}
@@ -194,7 +202,10 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                       {fmt(mbg)}
                     </td>
                     <td className="border p-2 text-right">
-                      {fmt(parseFloat(r.deposit_amount || 0))}
+                      {fmt(cashDepositRow)}
+                    </td>
+                    <td className="border p-2 text-right">
+                      {fmt(qrDepositRow)}
                     </td>
                     <td className="border p-2">
                       <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
@@ -256,12 +267,20 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                   )}
                 </td>
                 <td className="border p-2 text-right text-orange-700">
-                  {fmt(driver.P)}
+                  {fmt(driver.mbgTotal)}
                 </td>
                 <td className="border p-2 text-right">
                   {fmt(
                     rows.reduce(
                       (acc, r) => acc + parseFloat(r.deposit_amount || 0),
+                      0,
+                    ),
+                  )}
+                </td>
+                <td className="border p-2 text-right">
+                  {fmt(
+                    rows.reduce(
+                      (acc, r) => acc + parseFloat((r.transaction_amount || 0) - (r.discount_amount || 0)),
                       0,
                     ),
                   )}
@@ -274,17 +293,18 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
           {[
-            [" MBG", `${fmt(driver.P)}`],
-            [" Total Earning", `${fmt(driver.Q, 2)}`],
-            [" Revenue Incentive", `${fmt(driver.R, 2)}`],
-            [" Additional Incentive", `${fmt(driver.S)}`],
-            [" Cash Collection", `${fmt(driver.T, 2)}`],
-            [" Cash Deposited", `${fmt(driver.U)}`],
-            [" Cash Balance ", `${fmt(driver.V, 2)}`],
-            [" Total Payout ", `${fmt(driver.W, 2)}`],
-            [" Payout After Adj ", `${fmt(driver.X, 2)}`],
-            [" Customer Trips Tip", `${fmt(driver.AA, 2)}`],
-            [" Final Payout ", `${fmt(driver.AB, 2)}`],
+            [" MBG", `${fmt(driver.mbgTotal, 2)}`],
+            [" Total Earning", `${fmt(driver.totalEarnings, 2)}`],
+            [" Revenue Incentive", `${fmt(driver.revenueIncentive, 2)}`],
+            [" Additional Incentive", `${fmt(driver.additionalIncentive, 2)}`],
+            [" Cash Collection", `${fmt(driver.totalCashCollection, 2)}`],
+            [" Cash Deposited", `${fmt(driver.cashDeposited)}`],
+            [" Cash Balance ", `${fmt(driver.cashBalance, 2)}`],
+            [" QR Deposited", `${fmt(driver.qrDeposited, 2)}`],
+            [" Total Payout ", `${fmt(driver.totalPayout, 2)}`],
+            [" Payout After Adj ", `${fmt(driver.payoutAfterAdj, 2)}`],
+            [" Customer Trips Tip", `${fmt(driver.customerTripsTip, 2)}`],
+            [" Final Payout ", `${fmt(driver.finalPayout, 2)}`],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -413,92 +433,58 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
                     {row.driverName}
                   </td>
 
-                  {/* N — Grand Total MBG — clickable */}
                   <td
                     className={`${cellClass} text-green-700 font-bold cursor-pointer hover:underline`}
                     onClick={() => setSelectedDriver(row)}
                     title="Click to see daily breakdown"
                   >
-                    {fmt(row.P)}
+                    {fmt(row.mbgTotal)}
                   </td>
 
-                  {/* O — Weekly Acceptance */}
-                  <td className={cellClass}>{fmtPct(row.O)}</td>
+                  <td className={cellClass}>{fmtPct(row.weeklyAcceptance)}</td>
 
-                  {/* Q */}
-                  <td className={cellClass}>{fmt(row.Q)}</td>
+                  <td className={cellClass}>{fmt(row.totalEarnings)}</td>
 
-                  {/* R */}
-                  <td className={cellClass}>{fmt(row.R)}</td>
+                  <td className={cellClass}>{fmt(row.revenueIncentive)}</td>
+                  <td className={cellClass}>{fmt(row.additionalIncentive)}</td>
 
-                  {/* S */}
-                  <td className={cellClass}>{fmt(row.S)}</td>
+                  <td className={cellClass}>{fmt(row.totalCashCollection)}</td>
 
-                  {/* T */}
-                  <td className={cellClass}>{fmt(row.T)}</td>
+                  <td className={cellClass}>{fmt(row.cashDeposited)}</td>
 
-                  {/* U */}
-                  <td className={cellClass}>{fmt(row.U)}</td>
-
-                  {/* V — Cash Balance */}
                   <td
                     className={`${cellClass} bg-red-100 text-red-700 font-semibold`}
                   >
-                    {fmt(row.V)}
+                    {fmt(row.cashBalance)}
                   </td>
 
-                  {/* W — Total Payout */}
                   <td
                     className={`${cellClass} bg-orange-100 text-orange-700 font-semibold`}
                   >
-                    {fmt(row.W)}
+                    {fmt(row.totalPayout)}
                   </td>
 
-                  {/* X */}
-                  <td className={cellClass}>{fmt(row.X)}</td>
+                  <td className={cellClass}>{fmt(row.payoutAfterAdj)}</td>
 
-                  {/* Y */}
-                  <td className={cellClass}>{fmt(row.Y)}</td>
+                  <td className={cellClass}>{fmt(row.credit)}</td>
 
-                  {/* Z */}
-                  <td className={cellClass}>{fmt(row.Z)}</td>
+                  <td className={cellClass}>{fmt(row.debit)}</td>
 
-                  {/* AA */}
-                  <td className={cellClass}>{fmt(row.AA)}</td>
+                  <td className={cellClass}>{fmt(row.customerTripsTip)}</td>
 
-                  {/* AB — Final Payout */}
                   <td
-                    className={`${cellClass} font-bold text-sm ${
-                      row.AB >= 0
-                        ? "text-green-700 bg-green-50"
-                        : "text-red-700 bg-red-50"
-                    }`}
+                    className={`${cellClass} font-bold text-sm ${row.finalPayout >= 0
+                      ? "text-green-700 bg-green-50"
+                      : "text-red-700 bg-red-50"
+                      }`}
                   >
-                    {fmt(row.AB)}
+                    {fmt(row.finalPayout)}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-red-100 border border-red-300 inline-block rounded" />
-          Cash Balance (T + U)
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-orange-100 border border-orange-300 inline-block rounded" />
-          Total Payout (P + R + S)
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-yellow-200 border border-yellow-400 inline-block rounded" />
-          Final Payout (X + Y + AA − Z)
-        </span>
-        <span className="flex items-center gap-1 text-green-600 font-medium cursor-pointer">
-          ↑ Click on MBG value to see daily breakdown
-        </span>
       </div>
     </>
   );
@@ -632,8 +618,6 @@ const NewDriverPerformanceReport = () => {
   };
 
   const handleDateSelect = (range, selectedDay) => {
-    // We always use the 'selectedDay' (the actual day clicked)
-    // to start a new 7-day window, regardless of previous selection.
     if (!selectedDay) return;
 
     const fromDate = moment(selectedDay).format("YYYY-MM-DD");
@@ -681,7 +665,7 @@ const NewDriverPerformanceReport = () => {
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          "Failed to fetch Driver Performance Report",
+        "Failed to fetch Driver Performance Report",
       );
       setReportData([]);
     } finally {
@@ -697,7 +681,6 @@ const NewDriverPerformanceReport = () => {
         </CardHeader>
         <CardContent>
           <div className="flex w-full flex-row gap-4 mb-6 items-end">
-            {/* Column 1: Date Picker */}
             <div className="flex-1 flex flex-col gap-1.5">
               <label className="text-sm font-medium">Select Start Date</label>
               <Popover>
@@ -705,7 +688,7 @@ const NewDriverPerformanceReport = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal h-11", // Standard height
+                      "w-full justify-start text-left font-normal h-11",
                       !dates.fromDate && "text-muted-foreground",
                     )}
                   >
@@ -735,7 +718,6 @@ const NewDriverPerformanceReport = () => {
               </Popover>
             </div>
 
-            {/* Column 2: Selected Range Display */}
             <div className="flex-1 flex flex-col gap-1.5">
               <Label className="text-sm font-medium">Selected Range:</Label>
               <div className="flex items-center px-3 bg-blue-50 border border-blue-100 rounded-md h-11">
@@ -757,12 +739,11 @@ const NewDriverPerformanceReport = () => {
               </div>
             </div>
 
-            {/* Column 3: Button */}
             <div className="flex-1 flex flex-col">
               <Button
                 onClick={fetchDriverPerformanceReport}
                 disabled={isLoading}
-                className="h-11 w-full" /* Matched height with other inputs */
+                className="h-11 w-full"
               >
                 {isLoading ? (
                   <>
@@ -775,7 +756,6 @@ const NewDriverPerformanceReport = () => {
               </Button>
             </div>
           </div>
-          {/* Content */}
           <div className="mt-2">
             {isLoading ? (
               <div className="flex justify-center items-center py-8">
