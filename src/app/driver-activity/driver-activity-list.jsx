@@ -59,22 +59,18 @@ const DriverActivityList = () => {
 
   const [pageInput, setPageInput] = useState("");
   const storeCurrentPage = () => {
-    Cookies.set("driverActivityReturnPage", (pagination.pageIndex + 1).toString(), { 
-      expires: 1 
+    Cookies.set("driverActivityReturnPage", (pagination.pageIndex + 1).toString(), {
+      expires: 1
     });
   };
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async ({ driver_push_date, driver_sl_no }) => {
+    mutationFn: async (id) => {
       const token = Cookies.get("token");
-      const formData = new FormData();
-      formData.append("driver_push_date", driver_push_date);
-      formData.append("driver_sl_no", driver_sl_no);
 
-      const response = await axios.post(
-        `${BASE_URL}/api/driver-activity-all-delete`,
-        formData,
+      const response = await axios.delete(
+        `${BASE_URL}/api/driver-activity/${id}`,
         {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -105,12 +101,9 @@ const DriverActivityList = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (selectedActivity) {
-      deleteMutation.mutate({
-        driver_push_date: selectedActivity.driver_push_date,
-        driver_sl_no: selectedActivity.driver_sl_no,
-      });
+  const confirmDelete = (id) => {
+    if (id) {
+      deleteMutation.mutate(id);
     }
   };
 
@@ -118,7 +111,7 @@ const DriverActivityList = () => {
     const savedPage = Cookies.get("driverActivityReturnPage");
     if (savedPage) {
       Cookies.remove("driverActivityReturnPage");
-      
+
       setTimeout(() => {
         const pageIndex = parseInt(savedPage) - 1;
         if (pageIndex >= 0) {
@@ -137,11 +130,11 @@ const DriverActivityList = () => {
   useEffect(() => {
     const timerId = setTimeout(() => {
       const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-      
+
       if (isNewSearch) {
         setPagination(prev => ({ ...prev, pageIndex: 0 }));
       }
-      
+
       setDebouncedSearchTerm(searchTerm);
       setPreviousSearchTerm(searchTerm);
     }, 500);
@@ -164,7 +157,7 @@ const DriverActivityList = () => {
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
-      
+
       if (debouncedSearchTerm) {
         params.append("search", debouncedSearchTerm);
       }
@@ -172,7 +165,7 @@ const DriverActivityList = () => {
       const response = await axios.get(
         `${BASE_URL}/api/driver-activity?${params}`,
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
@@ -187,7 +180,7 @@ const DriverActivityList = () => {
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = activitiesData?.last_page || 1;
-    
+
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
@@ -197,7 +190,7 @@ const DriverActivityList = () => {
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
-          
+
           if (debouncedSearchTerm) {
             params.append("search", debouncedSearchTerm);
           }
@@ -205,7 +198,7 @@ const DriverActivityList = () => {
           const response = await axios.get(
             `${BASE_URL}/api/driver-activity?${params}`,
             {
-              headers: { 
+              headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json"
               },
@@ -219,7 +212,7 @@ const DriverActivityList = () => {
 
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-    
+
       if (!queryClient.getQueryData(["driver-activities", debouncedSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
           queryKey: ["driver-activities", debouncedSearchTerm, prevPage],
@@ -228,7 +221,7 @@ const DriverActivityList = () => {
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
-            
+
             if (debouncedSearchTerm) {
               params.append("search", debouncedSearchTerm);
             }
@@ -236,7 +229,7 @@ const DriverActivityList = () => {
             const response = await axios.get(
               `${BASE_URL}/api/driver-activity?${params}`,
               {
-                headers: { 
+                headers: {
                   Authorization: `Bearer ${token}`,
                   "Content-Type": "application/json"
                 },
@@ -290,7 +283,7 @@ const DriverActivityList = () => {
     },
     {
       accessorKey: "driver_uuid",
-      id: "Driver UUID", 
+      id: "Driver UUID",
       header: "Driver UUID",
       cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("Driver UUID")}</div>,
       size: 200,
@@ -410,7 +403,7 @@ const DriverActivityList = () => {
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData(["driver-activities", debouncedSearchTerm, targetPage]);
-    
+
     if (cachedData) {
       setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));
     } else {
@@ -421,7 +414,7 @@ const DriverActivityList = () => {
   const handlePageInput = (e) => {
     const value = e.target.value;
     setPageInput(value);
-    
+
     if (value && !isNaN(value)) {
       const pageNum = parseInt(value);
       if (pageNum >= 1 && pageNum <= table.getPageCount()) {
@@ -434,7 +427,7 @@ const DriverActivityList = () => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = table.getPageCount();
     const buttons = [];
-    
+
     buttons.push(
       <Button
         key={1}
@@ -490,16 +483,16 @@ const DriverActivityList = () => {
 
   const TableShimmer = () => {
     return Array.from({ length: 10 }).map((_, index) => (
-      <TableRow key={index} className="animate-pulse h-11"> 
+      <TableRow key={index} className="animate-pulse h-11">
         {table.getVisibleFlatColumns().map((column) => (
           <TableCell key={column.id} className="py-1">
-            <div className="h-8 bg-gray-200 rounded w-full"></div> 
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
           </TableCell>
         ))}
       </TableRow>
     ));
   };
-  
+
   if (isError) {
     return (
       <div className="w-full p-4  ">
@@ -530,8 +523,8 @@ const DriverActivityList = () => {
                 <div className="mt-2 p-3 bg-muted rounded-md">
                   <p><span className="font-medium">Driver:</span> {selectedActivity.driver_name} {selectedActivity.driver_surname}</p>
                   <p><span className="font-medium">Trips Completed:</span> {selectedActivity.trip_completed}</p>
-                  <p><span className="font-medium">Push Date:</span> {selectedActivity.driver_push_date}</p>
-                  <p><span className="font-medium">SL No:</span> {selectedActivity.driver_sl_no}</p>
+                  <p><span className="font-medium">Time Online:</span> {selectedActivity.time_online}</p>
+                  <p><span className="font-medium">Time on Trip:</span> {selectedActivity.time_on_trip}</p>
                 </div>
               )}
             </AlertDialogDescription>
@@ -539,7 +532,7 @@ const DriverActivityList = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={() => confirmDelete(selectedActivity.id)}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
               disabled={deleteMutation.isPending}
             >
@@ -594,7 +587,7 @@ const DriverActivityList = () => {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        <CreateDriverActivity refetch={refetch} />
+          <CreateDriverActivity refetch={refetch} />
         </div>
       </div>
 
@@ -604,23 +597,23 @@ const DriverActivityList = () => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead 
-                    key={header.id} 
+                  <TableHead
+                    key={header.id}
                     className="h-10 px-3 bg-[var(--team-color)] text-[var(--label-color)]  text-sm font-medium"
                     style={{ width: header.column.columnDef.size }}
                   >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
-          
+
           <TableBody>
             {isFetching && !table.getRowModel().rows.length ? (
               <TableShimmer />
@@ -642,7 +635,7 @@ const DriverActivityList = () => {
                 </TableRow>
               ))
             ) : (
-              <TableRow className="h-12"> 
+              <TableRow className="h-12">
                 <TableCell colSpan={columns.length} className="h-24 text-center text-sm">
                   No driver activities found.
                 </TableCell>
@@ -657,7 +650,7 @@ const DriverActivityList = () => {
           Showing {activitiesData?.from || 0} to {activitiesData?.to || 0} of{" "}
           {activitiesData?.total || 0} activities
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
@@ -668,7 +661,7 @@ const DriverActivityList = () => {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <div className="flex items-center space-x-1">
             {generatePageButtons()}
           </div>

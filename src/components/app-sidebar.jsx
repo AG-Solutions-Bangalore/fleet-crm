@@ -67,6 +67,10 @@ const NAVIGATION_CONFIG = {
           title: "Vehicle",
           url: "/vehicle",
         },
+        {
+          title: "Driver QR",
+          url: "/qr-drivers",
+        },
       ],
     },
 
@@ -96,6 +100,10 @@ const NAVIGATION_CONFIG = {
           title: "Payment",
           url: "/payment",
         },
+        {
+          title: "Daily Cash",
+          url: "/daily-cash",
+        },
       ],
     },
   },
@@ -107,14 +115,6 @@ const NAVIGATION_CONFIG = {
       isActive: false,
       icon: BarChart3,
       items: [
-        // {
-        //   title: "Report",
-        //   url: "/report",
-        // },
-        // {
-        //   title: "Driver Performance",
-        //   url: "/performance-driver-report",
-        // },
         {
           title: "Performance New",
           url: "/performance-new",

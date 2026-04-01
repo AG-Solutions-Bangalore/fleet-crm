@@ -87,21 +87,15 @@ const TripList = () => {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async ({ trip_push_date, trip_sl_no }) => {
+    mutationFn: async (id) => {
       const token = Cookies.get("token");
-      const formData = new FormData();
-      formData.append("trip_push_date", trip_push_date);
-      formData.append("trip_sl_no", trip_sl_no);
 
-      const response = await axios.post(
-        `${BASE_URL}/api/tripAlldelete`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await axios.delete(`${BASE_URL}/api/trip/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
+      },
       );
       return response.data;
     },
@@ -126,12 +120,9 @@ const TripList = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (selectedTrip) {
-      deleteMutation.mutate({
-        trip_push_date: selectedTrip.trip_push_date,
-        trip_sl_no: selectedTrip.trip_sl_no,
-      });
+  const confirmDelete = (id) => {
+    if (id) {
+      deleteMutation.mutate(id);
     }
   };
 
@@ -704,22 +695,21 @@ const TripList = () => {
               {selectedTrip && (
                 <div className="mt-2 p-3 bg-muted rounded-md">
                   <p>
-                    <span className="font-medium">Push Date:</span>{" "}
-                    {moment(selectedTrip.trip_push_date).format(
-                      "DD-MM-YYYY hh:mm A",
-                    )}
+                    <span className="font-medium">Driver Name:</span>{" "}
+                    {selectedTrip.trip_driver_full_name}
                   </p>
                   <p>
-                    <span className="font-medium">SL No:</span>{" "}
-                    {selectedTrip.trip_sl_no}
+                    <span className="font-medium">Vehicle No:</span>{" "}
+                    {selectedTrip.trip_vehicle_number_plate}
                   </p>
-                  {selectedTrip.trip_driver_first_name && (
-                    <p>
-                      <span className="font-medium">Driver:</span>{" "}
-                      {selectedTrip.trip_driver_first_name}{" "}
-                      {selectedTrip.trip_driver_surname}
-                    </p>
-                  )}
+                  <p>
+                    <span className="font-medium">Distance:</span>{" "}
+                    {selectedTrip.trip_distance}
+                  </p>
+                  <p>
+                    <span className="font-medium">Ride Fare:</span>{" "}
+                    {selectedTrip.trip_ride_fare}
+                  </p>
                 </div>
               )}
             </AlertDialogDescription>
@@ -727,7 +717,7 @@ const TripList = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={() => confirmDelete(selectedTrip?.id)}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
               disabled={deleteMutation.isPending}
             >
@@ -803,9 +793,9 @@ const TripList = () => {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                   </TableHead>
                 ))}
               </TableRow>

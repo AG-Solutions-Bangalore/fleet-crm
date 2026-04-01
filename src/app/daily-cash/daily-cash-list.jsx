@@ -38,22 +38,21 @@ import {
 } from "@tanstack/react-table";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Eye, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import moment from "moment";
-import CreatePayment from "./create-payment";
+import CreateDailyCash from "./create-daily-cash";
 
-const PaymentList = () => {
+
+const DailyCashList = () => {
   const queryClient = useQueryClient();
   const keyDown = useNumericInput();
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [previousSearchTerm, setPreviousSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -63,7 +62,7 @@ const PaymentList = () => {
   const [pageInput, setPageInput] = useState("");
 
   const storeCurrentPage = () => {
-    Cookies.set("paymentReturnPage", (pagination.pageIndex + 1).toString(), {
+    Cookies.set("dailyCashReturnPage", (pagination.pageIndex + 1).toString(), {
       expires: 1
     });
   };
@@ -74,7 +73,7 @@ const PaymentList = () => {
       const token = Cookies.get("token");
 
       const response = await axios.delete(
-        `${BASE_URL}/api/payment/${id}`,
+        `${BASE_URL}/api/daily-cash/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -84,23 +83,22 @@ const PaymentList = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      toast.success(data.message || "Payment deleted successfully");
-      // Invalidate and refetch payments query
+      toast.success(data.message || "Daily cash deleted successfully");
       queryClient.invalidateQueries({
-        queryKey: ["payments", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["daily-cash", debouncedSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
-      setSelectedPayment(null);
+      setSelectedId(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || "Failed to delete payment");
+      toast.error(error.response?.data?.message || "Failed to delete daily cash");
       setDeleteDialogOpen(false);
-      setSelectedPayment(null);
+      setSelectedId(null);
     },
   });
 
-  const handleDeleteClick = (payment) => {
-    setSelectedPayment(payment);
+  const handleDeleteClick = (id) => {
+    setSelectedId(id);
     setDeleteDialogOpen(true);
   };
 
@@ -111,9 +109,9 @@ const PaymentList = () => {
   };
 
   useEffect(() => {
-    const savedPage = Cookies.get("paymentReturnPage");
+    const savedPage = Cookies.get("dailyCashReturnPage");
     if (savedPage) {
-      Cookies.remove("paymentReturnPage");
+      Cookies.remove("dailyCashReturnPage");
 
       setTimeout(() => {
         const pageIndex = parseInt(savedPage) - 1;
@@ -122,7 +120,7 @@ const PaymentList = () => {
           setPageInput(savedPage);
 
           queryClient.invalidateQueries({
-            queryKey: ["payments"],
+            queryKey: ["daily-cash"],
             exact: false,
           });
         }
@@ -148,13 +146,13 @@ const PaymentList = () => {
   }, [searchTerm, previousSearchTerm]);
 
   const {
-    data: paymentsData,
+    data: dailyCashData,
     isLoading,
     isError,
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["payments", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["daily-cash", debouncedSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
@@ -166,7 +164,7 @@ const PaymentList = () => {
       }
 
       const response = await axios.get(
-        `${BASE_URL}/api/payment?${params}`,
+        `${BASE_URL}/api/daily-cash?${params}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -182,12 +180,12 @@ const PaymentList = () => {
 
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
-    const totalPages = paymentsData?.last_page || 1;
+    const totalPages = dailyCashData?.last_page || 1;
 
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["payments", debouncedSearchTerm, nextPage],
+        queryKey: ["daily-cash", debouncedSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
@@ -199,7 +197,7 @@ const PaymentList = () => {
           }
 
           const response = await axios.get(
-            `${BASE_URL}/api/payment?${params}`,
+            `${BASE_URL}/api/daily-cash?${params}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -216,9 +214,9 @@ const PaymentList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["payments", debouncedSearchTerm, prevPage])) {
+      if (!queryClient.getQueryData(["daily-cash", debouncedSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["payments", debouncedSearchTerm, prevPage],
+          queryKey: ["daily-cash", debouncedSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
@@ -230,7 +228,7 @@ const PaymentList = () => {
             }
 
             const response = await axios.get(
-              `${BASE_URL}/api/payment?${params}`,
+              `${BASE_URL}/api/daily-cash?${params}`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -244,14 +242,13 @@ const PaymentList = () => {
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, paymentsData?.last_page]);
+  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, dailyCashData?.last_page]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({
-    "Transaction UUID": false,
-    "Driver UUID": false,
-    "Trip UUID": false,
+    "Driver Email": false,
+    "Driver Mobile": false,
   });
   const [rowSelection, setRowSelection] = useState({});
 
@@ -263,140 +260,10 @@ const PaymentList = () => {
         const globalIndex = (pagination.pageIndex * pagination.pageSize) + row.index + 1;
         return <div className="text-xs font-medium">{globalIndex}</div>;
       },
-      size: 60,
+      size: 70,
     },
     {
-      accessorKey: "transaction_uuid",
-      id: "Transaction UUID",
-      header: "Transaction UUID",
-      cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("Transaction UUID")}</div>,
-      size: 200,
-    },
-    {
-      accessorKey: "driver_uuid",
-      id: "Driver UUID",
-      header: "Driver UUID",
-      cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("Driver UUID")}</div>,
-      size: 200,
-    },
-    {
-      accessorKey: "driver_full_name",
-      id: "Driver Name",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="px-2 h-8 text-xs"
-        >
-          Driver Name
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => <div className="text-xs font-medium">{row.getValue("Driver Name")}</div>,
-      size: 150,
-    },
-    {
-      accessorKey: "trip_uuid",
-      id: "Trip UUID",
-      header: "Trip UUID",
-      cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("Trip UUID")}</div>,
-      size: 200,
-    },
-    {
-      accessorKey: "organisation_name",
-      id: "Organisation",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="px-2 h-8 text-xs"
-        >
-          Organisation
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => <div className="text-xs">{row.getValue("Organisation")}</div>,
-      size: 200,
-    },
-    {
-      accessorKey: "paid_to_you",
-      id: "Paid to You",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="px-2 h-8 text-xs"
-        >
-          Paid to You
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("Paid to You"));
-        const isNegative = amount < 0;
-        return (
-          <div className={`text-xs font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-            ₹{amount.toFixed(2)}
-          </div>
-        );
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "paid_to_you_your_earings",
-      id: "Your Earnings",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="px-2 h-8 text-xs"
-        >
-          Your Earnings
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("Your Earnings"));
-        const isNegative = amount < 0;
-        return (
-          <div className={`text-xs font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-            ₹{amount.toFixed(2)}
-          </div>
-        );
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "paid_to_you_cash_collected",
-      id: "Cash Collected",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="px-2 h-8 text-xs"
-        >
-          Cash Collected
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("Cash Collected"));
-        const isNegative = amount < 0;
-        return (
-          <div className={`text-xs font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-            ₹{amount.toFixed(2)}
-          </div>
-        );
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "transaction_push_date",
+      accessorKey: "transaction_date",
       id: "Transaction Date",
       header: ({ column }) => (
         <Button
@@ -405,28 +272,140 @@ const PaymentList = () => {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="px-2 h-8 text-xs"
         >
-          Transaction Date
+          Date
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
       cell: ({ row }) => <div className="text-xs">{moment(row.getValue("Transaction Date")).format("DD-MM-YYYY")}</div>,
-      size: 120,
+    },
+    {
+      accessorKey: "transaction_time",
+      id: "Transaction Time",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Time
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => <div className="text-xs">{row.getValue("Transaction Time")}</div>,
+      // size: 120,
+    },
+    {
+      accessorKey: "merchant_id",
+      id: "Merchant ID",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Merchant ID
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        return <div className="text-xs font-medium">{row.getValue("Merchant ID")}</div>;
+      },
+      // size: 120,
+    },
+    {
+      accessorKey: "amount",
+      id: "Amount",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Amount (₹)
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const amount = parseFloat(row.getValue("Amount"));
+        return <div className="text-xs">₹{amount.toFixed(2)}</div>;
+      },
+      // size: 120,
+    },
+    {
+      accessorKey: "transaction_amount",
+      id: "Transaction Amount",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Transaction (₹)
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const amount = parseFloat(row.getValue("Transaction Amount"));
+        return <div className="text-xs">₹{amount.toFixed(2)}</div>;
+      },
+      // size: 80,
+    },
+    {
+      accessorKey: "discount_amount",
+      id: "Discount Amount",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Discount (₹)
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const rate = parseFloat(row.getValue("Discount Amount"));
+        return <div className="text-xs">₹{rate.toFixed(2)}</div>;
+      },
+      // size: 100,
+    },
+    {
+      accessorKey: "push_date",
+      id: "Push Date",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Push Date
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => <div className="text-xs">{moment(row.getValue("Push Date")).format("DD-MM-YYYY")}</div>,
+      // size: 100,
     },
     {
       id: "actions",
       header: "Action",
       cell: ({ row }) => {
-        const payment = row.original;
+        const id = row.original;
 
         return (
-          <div className="flex flex-row gap-1">
+          <div className="flex flex-row">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteClick(payment)}
+                    onClick={() => handleDeleteClick(id)}
                     className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                     disabled={deleteMutation.isPending}
                   >
@@ -434,19 +413,19 @@ const PaymentList = () => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Delete Payment</p>
+                  <p>Delete Daily Cash</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
         );
       },
-      size: 100,
+      size: 80,
     },
   ];
 
   const table = useReactTable({
-    data: paymentsData?.data || [],
+    data: dailyCashData?.data || [],
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -457,7 +436,7 @@ const PaymentList = () => {
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     manualPagination: true,
-    pageCount: paymentsData?.last_page || -1,
+    pageCount: dailyCashData?.last_page || -1,
     onPaginationChange: setPagination,
     state: {
       sorting,
@@ -475,7 +454,7 @@ const PaymentList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["payments", debouncedSearchTerm, targetPage]);
+    const cachedData = queryClient.getQueryData(["daily-cash", debouncedSearchTerm, targetPage]);
 
     if (cachedData) {
       setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));
@@ -572,7 +551,7 @@ const PaymentList = () => {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="text-destructive font-medium mb-2">
-              Error Fetching Payments List Data
+              Error Fetching Daily Cash Data
             </div>
             <Button onClick={() => refetch()} variant="outline" size="sm">
               Try Again
@@ -591,14 +570,15 @@ const PaymentList = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this payment.
-              {selectedPayment && (
+              This action cannot be undone. This will permanently delete this daily cash record.
+              {selectedId && (
                 <div className="mt-2 p-3 bg-muted rounded-md">
-                  <p><span className="font-medium">Driver:</span> {selectedPayment.driver_full_name || selectedPayment.driver_name}</p>
-                  <p><span className="font-medium">Organisation:</span> {selectedPayment.organisation_name}</p>
-                  <p><span className="font-medium">Paid To You:</span> ₹{parseFloat(selectedPayment.paid_to_you).toFixed(2)}</p>
-                  <p><span className="font-medium">Your Earnings:</span> ₹{parseFloat(selectedPayment.paid_to_you_your_earings).toFixed(2)}</p>
-                  <p><span className="font-medium">Cash Collected:</span> ₹{parseFloat(selectedPayment.paid_to_you_cash_collected).toFixed(2)}</p>
+                  <p><span className="font-medium">Date:</span> {moment(selectedId.transaction_date).format("DD-MM-YYYY")}</p>
+                  <p><span className="font-medium">Time:</span> {selectedId.transaction_time}</p>
+                  <p><span className="font-medium">Merchant ID:</span> {selectedId.merchant_id}</p>
+                  <p><span className="font-medium">Amount:</span> {selectedId.amount}</p>
+                  <p><span className="font-medium">Transaction:</span> {selectedId.transaction_amount}</p>
+                  <p><span className="font-medium">Discount:</span> {selectedId.discount_amount}</p>
                 </div>
               )}
             </AlertDialogDescription>
@@ -606,7 +586,7 @@ const PaymentList = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => confirmDelete(selectedPayment.id)}
+              onClick={() => confirmDelete(selectedId?.id)}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
               disabled={deleteMutation.isPending}
             >
@@ -627,7 +607,7 @@ const PaymentList = () => {
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
-            placeholder="Search payments..."
+            placeholder="Search daily cash..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             onKeyDown={(e) => {
@@ -661,7 +641,7 @@ const PaymentList = () => {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <CreatePayment refetch={refetch} />
+          <CreateDailyCash refetch={refetch} />
         </div>
       </div>
 
@@ -711,7 +691,7 @@ const PaymentList = () => {
             ) : (
               <TableRow className="h-12">
                 <TableCell colSpan={columns.length} className="h-24 text-center text-sm">
-                  No payments found.
+                  No daily cash records found.
                 </TableCell>
               </TableRow>
             )}
@@ -721,8 +701,8 @@ const PaymentList = () => {
 
       <div className="flex items-center justify-between py-1">
         <div className="text-sm text-muted-foreground">
-          Showing {paymentsData?.from || 0} to {paymentsData?.to || 0} of{" "}
-          {paymentsData?.total || 0} payments
+          Showing {dailyCashData?.from || 0} to {dailyCashData?.to || 0} of{" "}
+          {dailyCashData?.total || 0} records
         </div>
 
         <div className="flex items-center space-x-2">
@@ -771,4 +751,8 @@ const PaymentList = () => {
   );
 };
 
-export default PaymentList;
+export default DailyCashList;
+
+
+
+
