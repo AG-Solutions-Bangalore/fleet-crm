@@ -188,7 +188,7 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                     className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
                   >
                     <td className="border p-2">
-                       {moment(r.performance_date).format("DD-MM-YYYY") || "—"}
+                      {moment(r.performance_date).format("DD-MM-YYYY") || "—"}
                     </td>
                     <td className="border p-2 text-right">
                       {hours.toFixed(2)}
@@ -345,7 +345,7 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
   const cellClass =
     "border border-gray-300 p-2 text-right text-xs whitespace-nowrap";
   const nameCellClass =
-    "border border-gray-300 p-2 text-left text-xs font-semibold whitespace-nowrap sticky left-0 bg-white z-10";
+    "border border-gray-300 p-2 text-left text-xs font-semibold whitespace-nowrap sticky left-0 bg-white";
 
   return (
     <>
@@ -363,9 +363,9 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
           <thead>
             <tr>
               <th
-                className={`${colHeaderClass} sticky left-0 z-20 bg-blue-900`}
+                className={`${colHeaderClass} sticky left-0 z-auto bg-blue-900`}
               >
-                Name
+                Driver Name
               </th>
               <th
                 className={`${colHeaderClass} bg-green-700`}
@@ -377,7 +377,7 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
                 className={colHeaderClass}
                 title="Weekly Acceptance Percentage"
               >
-                Weekly Acc%
+                Acc%
               </th>
               <th className={colHeaderClass} title="Total Earnings">
                 Tot Earn
@@ -392,7 +392,10 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
                 Tot Coll
               </th>
               <th className={colHeaderClass} title="Total Deposit">
-                Tot Dep
+                Tot CD
+              </th>
+              <th className={colHeaderClass} title="Total Deposit">
+                Tot QD
               </th>
               <th
                 className={`${colHeaderClass} bg-red-700`}
@@ -432,7 +435,6 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
                   <td className={`${nameCellClass} ${rowBg}`}>
                     {row.driverName}
                   </td>
-
                   <td
                     className={`${cellClass} text-green-700 font-bold cursor-pointer hover:underline`}
                     onClick={() => setSelectedDriver(row)}
@@ -440,38 +442,27 @@ const FleetReportView = ({ reportData, rules, calcEngines }) => {
                   >
                     {fmt(row.mbgTotal)}
                   </td>
-
                   <td className={cellClass}>{fmtPct(row.weeklyAcceptance)}</td>
-
                   <td className={cellClass}>{fmt(row.totalEarnings)}</td>
-
                   <td className={cellClass}>{fmt(row.revenueIncentive)}</td>
                   <td className={cellClass}>{fmt(row.additionalIncentive)}</td>
-
                   <td className={cellClass}>{fmt(row.totalCashCollection)}</td>
-
                   <td className={cellClass}>{fmt(row.cashDeposited)}</td>
-
+                  <td className={cellClass}>{fmt(row.qrDeposited)}</td>
                   <td
                     className={`${cellClass} bg-red-100 text-red-700 font-semibold`}
                   >
                     {fmt(row.cashBalance)}
                   </td>
-
                   <td
                     className={`${cellClass} bg-orange-100 text-orange-700 font-semibold`}
                   >
                     {fmt(row.totalPayout)}
                   </td>
-
                   <td className={cellClass}>{fmt(row.payoutAfterAdj)}</td>
-
                   <td className={cellClass}>{fmt(row.credit)}</td>
-
                   <td className={cellClass}>{fmt(row.debit)}</td>
-
                   <td className={cellClass}>{fmt(row.customerTripsTip)}</td>
-
                   <td
                     className={`${cellClass} font-bold text-sm ${row.finalPayout >= 0
                       ? "text-green-700 bg-green-50"
