@@ -7,10 +7,18 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import BASE_URL from "@/config/base-url";
+import { VEHICLE_PRODUCT_TYPES } from "@/config/vehicle-config";
+import { Label } from "@radix-ui/react-label";
 
 const CreateVehicle = () => {
   const navigate = useNavigate();
@@ -48,7 +56,7 @@ const CreateVehicle = () => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
 
         if (response.data.code === 422) {
@@ -59,7 +67,7 @@ const CreateVehicle = () => {
       } catch (error) {
         console.error(
           "Error checking duplicate vehicle",
-          error.response?.data?.message
+          error.response?.data?.message,
         );
         return true;
       }
@@ -94,27 +102,18 @@ const CreateVehicle = () => {
       isValid = false;
     }
 
-    if (!vehicle.vehicle_product_type?.trim()) {
-      newErrors.vehicle_product_type = "Vehicle Product Type is required";
-      isValid = false;
-    }
-
     setErrors(newErrors);
     return { isValid, errors: newErrors };
   };
 
   const createVehicleMutation = useMutation({
     mutationFn: async (formData) => {
-      const response = await axios.post(
-        `${BASE_URL}/api/vehicle`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.post(`${BASE_URL}/api/vehicle`, formData, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
       return response.data;
     },
     onSuccess: (data) => {
@@ -161,8 +160,14 @@ const CreateVehicle = () => {
 
       const formData = new FormData();
       formData.append("vehicle_uuid", vehicle.vehicle_uuid || "");
-      formData.append("vehicle_number_plate", vehicle.vehicle_number_plate || "");
-      formData.append("vehicle_product_type", vehicle.vehicle_product_type || "");
+      formData.append(
+        "vehicle_number_plate",
+        vehicle.vehicle_number_plate || "",
+      );
+      formData.append(
+        "vehicle_product_type",
+        vehicle.vehicle_product_type || "",
+      );
 
       setIsButtonDisabled(true);
       createVehicleMutation.mutate(formData);
@@ -230,7 +235,9 @@ const CreateVehicle = () => {
                     placeholder="Enter vehicle UUID"
                   />
                   {errors?.vehicle_uuid && (
-                    <p className="text-red-500 text-xs">{errors.vehicle_uuid}</p>
+                    <p className="text-red-500 text-xs">
+                      {errors.vehicle_uuid}
+                    </p>
                   )}
                   {isDuplicate && (
                     <div className="flex items-center gap-1 text-red-500 text-xs">
@@ -241,7 +248,10 @@ const CreateVehicle = () => {
                 </div>
 
                 <div className="">
-                  <Label htmlFor="vehicle_number_plate" className="text-xs font-medium">
+                  <Label
+                    htmlFor="vehicle_number_plate"
+                    className="text-xs font-medium"
+                  >
                     Number Plate *
                   </Label>
                   <Input
@@ -253,7 +263,9 @@ const CreateVehicle = () => {
                     placeholder="Enter vehicle number plate"
                   />
                   {errors?.vehicle_number_plate && (
-                    <p className="text-red-500 text-xs">{errors.vehicle_number_plate}</p>
+                    <p className="text-red-500 text-xs">
+                      {errors.vehicle_number_plate}
+                    </p>
                   )}
                   {isDuplicate && (
                     <div className="flex items-center gap-1 text-red-500 text-xs">
@@ -264,19 +276,32 @@ const CreateVehicle = () => {
                 </div>
 
                 <div className="">
-                  <Label htmlFor="vehicle_product_type" className="text-xs font-medium">
-                    Product Type *
+                  <Label
+                    htmlFor="vehicle_product_type"
+                    className="text-xs font-medium"
+                  >
+                    Vehicle Type
                   </Label>
-                  <Input
-                    id="vehicle_product_type"
-                    name="vehicle_product_type"
+                  <Select
                     value={vehicle.vehicle_product_type}
-                    onChange={onInputChange}
-                    placeholder="Enter product type (e.g., Black, SUV)"
-                  />
-                  {errors?.vehicle_product_type && (
-                    <p className="text-red-500 text-xs">{errors.vehicle_product_type}</p>
-                  )}
+                    onValueChange={(value) =>
+                      setVehicle((prev) => ({
+                        ...prev,
+                        vehicle_product_type: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VEHICLE_PRODUCT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

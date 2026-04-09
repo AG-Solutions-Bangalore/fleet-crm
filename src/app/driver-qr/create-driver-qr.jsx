@@ -219,7 +219,10 @@ const CreateDriverQr = ({ refetch, editData = null }) => {
                       className="border-none focus-visible:ring-0 shadow-none h-10 px-0"
                     />
                   </div>
-                  <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                  <ScrollArea 
+                    className="h-[250px]" 
+                    onWheel={(e) => e.stopPropagation()}
+                  >
                     <div className="p-1">
                       {driversLoading ? (
                         <div className="flex items-center justify-center py-6">
@@ -257,7 +260,7 @@ const CreateDriverQr = ({ refetch, editData = null }) => {
                         ))
                       )}
                     </div>
-                  </div>
+                  </ScrollArea>
                 </div>
               </PopoverContent>
             </Popover>

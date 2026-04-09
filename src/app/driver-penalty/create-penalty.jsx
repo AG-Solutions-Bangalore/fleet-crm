@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowLeft, CreditCard, User, History, Calendar, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  CreditCard,
+  User,
+  History,
+  Calendar,
+  AlertCircle,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -29,7 +36,7 @@ const CreatePenalty = () => {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
   const [penalty, setPenalty] = useState({
-    penalty_date: new Date().toISOString().split('T')[0],
+    penalty_date: new Date().toISOString().split("T")[0],
     driver_full_name: "",
     performance_type: "",
     penalty_amount: "",
@@ -127,8 +134,7 @@ const CreatePenalty = () => {
       console.error("Penalty Creation Error:", error.response?.data?.message);
       toast.error(error.response?.data?.message || "Penalty Creation Error");
     },
-    onSettled: () => {
-    },
+    onSettled: () => {},
   });
 
   const handleSubmit = async (e) => {
@@ -148,10 +154,7 @@ const CreatePenalty = () => {
       formData.append("driver_full_name", penalty.driver_full_name);
       formData.append("performance_type", penalty.performance_type);
       formData.append("penalty_amount", penalty.penalty_amount);
-      formData.append(
-        "penalty_details",
-        penalty.penalty_details || "",
-      );
+      formData.append("penalty_details", penalty.penalty_details || "");
 
       createPenaltyMutation.mutate(formData);
     } catch (error) {
@@ -274,6 +277,7 @@ const CreatePenalty = () => {
                   <Input
                     id="performance_type"
                     name="performance_type"
+                    disabled
                     value={penalty.performance_type}
                     onChange={onInputChange}
                     placeholder="Enter Performance Type"
