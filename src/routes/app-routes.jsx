@@ -60,7 +60,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute />}>
         {/* dashboard  */}
         <Route
-          path="/home"
+          path="/dashboard"
           element={
             <Suspense fallback={<LoadingBar />}>
               <Home />

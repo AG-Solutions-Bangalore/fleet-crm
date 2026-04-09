@@ -150,8 +150,7 @@ const CreateDeposit = () => {
       console.error("Deposit Creation Error:", error.response?.data?.message);
       toast.error(error.response?.data?.message || "Deposit Creation Error");
     },
-    onSettled: () => {
-    },
+    onSettled: () => {},
   });
 
   const handleSubmit = async (e) => {
@@ -298,6 +297,7 @@ const CreateDeposit = () => {
                   <Input
                     id="performance_type"
                     name="performance_type"
+                    disabled
                     value={deposit.performance_type}
                     onChange={onInputChange}
                     placeholder="Enter Performance Type"

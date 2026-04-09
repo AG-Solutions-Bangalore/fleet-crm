@@ -175,7 +175,7 @@ export default function LoginAuth() {
           throw new Error("Cookies not set properly");
         }
 
-        navigate("/home", { replace: true });
+        navigate("/dashboard", { replace: true });
       } else {
         toast.error(res.data.message || "Login Failed: Unexpected response.");
         setIsLoading(false);

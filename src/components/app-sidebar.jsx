@@ -33,7 +33,7 @@ const NAVIGATION_CONFIG = {
   COMMON: {
     DASHBOARD: {
       title: "Dashboard",
-      url: "/home",
+      url: "/dashboard",
       icon: LayoutDashboard,
       isActive: false,
     },

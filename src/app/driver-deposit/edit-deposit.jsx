@@ -180,8 +180,7 @@ const EditDeposit = () => {
       console.error("Deposit Update Error:", error.response?.data?.message);
       toast.error(error.response?.data?.message || "Deposit Update Error");
     },
-    onSettled: () => {
-    },
+    onSettled: () => {},
   });
 
   const handleSubmit = async (e) => {
@@ -334,6 +333,7 @@ const EditDeposit = () => {
                   <Input
                     id="performance_type"
                     name="performance_type"
+                    disabled
                     value={deposit.performance_type}
                     onChange={onInputChange}
                     placeholder="Enter Performance Type"
@@ -430,10 +430,7 @@ const EditDeposit = () => {
             <div className="flex gap-3 pt-6 border-t">
               <Button
                 type="submit"
-                disabled={
-                  updateDepositMutation.isPending ||
-                  !isFormDirty
-                }
+                disabled={updateDepositMutation.isPending || !isFormDirty}
                 className="flex items-center gap-2 bg-[var(--team-color)] text-white hover:bg-[var(--team-color)]/90 h-10 px-6 shadow-md transition-all active:scale-95 disabled:opacity-50"
               >
                 {updateDepositMutation.isPending ? (

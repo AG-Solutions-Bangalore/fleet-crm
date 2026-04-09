@@ -133,7 +133,7 @@ const EditPenalty = () => {
 
   const updatePenaltyMutation = useMutation({
     mutationFn: async (formData) => {
-      // Use POST with _method=PUT for FormData support in some PHP backends if needed, 
+      // Use POST with _method=PUT for FormData support in some PHP backends if needed,
       // but user specifically asked for PUT and formdata.
       const response = await axios.post(
         `${BASE_URL}/api/driver-penalty/${id}`,
@@ -161,8 +161,7 @@ const EditPenalty = () => {
       console.error("Penalty Update Error:", error.response?.data?.message);
       toast.error(error.response?.data?.message || "Penalty Update Error");
     },
-    onSettled: () => {
-    },
+    onSettled: () => {},
   });
 
   const handleSubmit = async (e) => {
@@ -314,6 +313,7 @@ const EditPenalty = () => {
                   <Input
                     id="performance_type"
                     name="performance_type"
+                    disabled
                     value={penalty.performance_type}
                     onChange={onInputChange}
                     placeholder="Enter Performance Type"
@@ -371,10 +371,7 @@ const EditPenalty = () => {
             <div className="flex gap-3 pt-6 border-t">
               <Button
                 type="submit"
-                disabled={
-                  updatePenaltyMutation.isPending ||
-                  !isFormDirty
-                }
+                disabled={updatePenaltyMutation.isPending || !isFormDirty}
                 className="flex items-center gap-2 bg-[var(--team-color)] text-white hover:bg-[var(--team-color)]/90 h-10 px-6 shadow-md transition-all active:scale-95 disabled:opacity-50"
               >
                 {updatePenaltyMutation.isPending ? (
