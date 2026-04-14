@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Teal Theme — 173.4 80.4% 40% */
+    --background: 173 25% 98%;
+    --foreground: 173 60% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 173 60% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 173 60% 8%;
+    --primary: 173.4 80.4% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 173 35% 93%;
+    --secondary-foreground: 173 60% 12%;
+    --muted: 173 20% 95%;
+    --muted-foreground: 173 15% 48%;
+    --accent: 173 60% 90%;
+    --accent-foreground: 173.4 80.4% 25%;
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 173 40% 86%;
+    --input: 173 40% 86%;
+    --ring: 173.4 80.4% 40%;
+    --chart-1: 173.4 80.4% 40%;
+    --chart-2: 163 75% 42%;
+    --chart-3: 183 72% 38%;
+    --chart-4: 153 70% 44%;
+    --chart-5: 193 68% 40%;
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 173 30% 98%;
+    --sidebar-foreground: 173 60% 8%;
+    --sidebar-primary: 173.4 80.4% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 173 35% 93%;
+    --sidebar-accent-foreground: 173 60% 12%;
+    --sidebar-border: 173 40% 86%;
+    --sidebar-ring: 173.4 80.4% 40%;
+
+    /* Brand / Custom */
+    --team-color: hsl(173.4, 80.4%, 40%);
+    --label-color: #ffffff;
+    --color-light: hsl(173, 75%, 92%);
+    --color: hsl(173.4, 80.4%, 40%);
+    --color-dark: hsl(173, 50%, 14%);
+    --colordark-text: hsl(173.4, 80.4%, 70%);
+    --color-border: hsl(173, 55%, 84%);
+    --color-border-dark: hsl(173, 40%, 22%);
+
+    /* Login */
+    --login-gradient: linear-gradient(
+      135deg,
+      hsl(173, 60%, 97%) 0%,
+      hsl(173, 55%, 92%) 100%
+    );
+    --login-blob-1: hsl(173.4, 80.4%, 68%);
+    --login-blob-2: hsl(173.4, 80.4%, 78%);
+    --login-blob-3: hsl(173.4, 80.4%, 86%);
+  }
+
+  .dark {
+    --background: 173 25% 5%;
+    --foreground: 173 20% 94%;
+    --card: 173 22% 7%;
+    --card-foreground: 173 20% 94%;
+    --popover: 173 22% 7%;
+    --popover-foreground: 173 20% 94%;
+    --primary: 173.4 80.4% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 173 20% 11%;
+    --secondary-foreground: 173 20% 90%;
+    --muted: 173 15% 13%;
+    --muted-foreground: 173 12% 54%;
+    --accent: 173 18% 13%;
+    --accent-foreground: 173.4 80.4% 62%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 173 18% 13%;
+    --input: 173 18% 13%;
+    --ring: 173.4 80.4% 40%;
+    --chart-1: 173.4 80.4% 50%;
+    --chart-2: 163 75% 48%;
+    --chart-3: 183 72% 46%;
+    --chart-4: 153 70% 50%;
+    --chart-5: 193 68% 46%;
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 173 20% 7%;
+    --sidebar-foreground: 173 15% 90%;
+    --sidebar-primary: 173.4 80.4% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 173 18% 12%;
+    --sidebar-accent-foreground: 173 15% 88%;
+    --sidebar-border: 173 18% 13%;
+    --sidebar-ring: 173.4 80.4% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Noto Sans Georgian", sans-serif;
+  }
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #fafafa #ffffff;
+}
+
+.bg-login-gradient {
+  background: var(--login-gradient);
+}
+
+.login-blob-1 {
+  background-color: var(--login-blob-1);
+}
+
+.login-blob-2 {
+  background-color: var(--login-blob-2);
+}
+
+.login-blob-3 {
+  background-color: var(--login-blob-3);
+}
+
+/* CKEditor content display */
+.ck-content {
+  line-height: 1.6;
+  color: #374151;
+}
+
+.ck-content h1,
+.ck-content h2,
+.ck-content h3,
+.ck-content h4,
+.ck-content h5,
+.ck-content h6 {
+  font-weight: bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.ck-content h1 {
+  font-size: 2em;
+}
+.ck-content h2 {
+  font-size: 1.5em;
+}
+.ck-content h3 {
+  font-size: 1.25em;
+}
+.ck-content h4 {
+  font-size: 1.125em;
+}
+
+.ck-content p {
+  margin-bottom: 1em;
+}
+
+.ck-content ul,
+.ck-content ol {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+
+.ck-content ul li {
+  list-style-type: disc;
+}
+
+.ck-content ol li {
+  list-style-type: decimal;
+}
+
+.ck-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.ck-content table th,
+.ck-content table td {
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.ck-content table th {
+  background-color: #f3f4f6;
+  font-weight: bold;
+}
+
+.ck-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ck-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.ck-content blockquote {
+  border-left: 4px solid #d1d5db;
+  padding-left: 1em;
+  font-style: italic;
+  margin: 1em 0;
+}

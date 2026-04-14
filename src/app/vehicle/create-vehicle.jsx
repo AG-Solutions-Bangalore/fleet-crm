@@ -33,6 +33,10 @@ const CreateVehicle = () => {
     vehicle_uuid: "",
     vehicle_number_plate: "",
     vehicle_product_type: "",
+    vehicle_variant: "",
+    merchant_id: "",
+    vehicle_umbrella: "No",
+    vehicle_tissue_box: "No",
   });
 
   const onInputChange = (e) => {
@@ -42,51 +46,6 @@ const CreateVehicle = () => {
       [name]: value,
     }));
   };
-
-  const checkDuplicateVehicle = async () => {
-    if (vehicle.vehicle_uuid && vehicle.vehicle_number_plate) {
-      try {
-        const response = await axios.post(
-          `${BASE_URL}/api/check-vehicle-duplicate`,
-          {
-            vehicle_uuid: vehicle.vehicle_uuid,
-            vehicle_number_plate: vehicle.vehicle_number_plate,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (response.data.code === 422) {
-          toast.error(response.data.message);
-          return false;
-        }
-        return true;
-      } catch (error) {
-        console.error(
-          "Error checking duplicate vehicle",
-          error.response?.data?.message,
-        );
-        return true;
-      }
-    }
-    return true;
-  };
-
-  useEffect(() => {
-    if (vehicle.vehicle_uuid && vehicle.vehicle_number_plate) {
-      const timer = setTimeout(async () => {
-        const isNotDuplicate = await checkDuplicateVehicle();
-        setIsDuplicate(!isNotDuplicate);
-      }, 500);
-
-      return () => clearTimeout(timer);
-    } else {
-      setIsDuplicate(false);
-    }
-  }, [vehicle.vehicle_uuid, vehicle.vehicle_number_plate]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -153,11 +112,6 @@ const CreateVehicle = () => {
     }
 
     try {
-      const isNotDuplicate = await checkDuplicateVehicle();
-      if (!isNotDuplicate) {
-        return;
-      }
-
       const formData = new FormData();
       formData.append("vehicle_uuid", vehicle.vehicle_uuid || "");
       formData.append(
@@ -168,6 +122,10 @@ const CreateVehicle = () => {
         "vehicle_product_type",
         vehicle.vehicle_product_type || "",
       );
+      formData.append("vehicle_variant", vehicle.vehicle_variant || "");
+      formData.append("merchant_id", vehicle.merchant_id || "");
+      formData.append("vehicle_umbrella", vehicle.vehicle_umbrella || "");
+      formData.append("vehicle_tissue_box", vehicle.vehicle_tissue_box || "");
 
       setIsButtonDisabled(true);
       createVehicleMutation.mutate(formData);
@@ -231,19 +189,12 @@ const CreateVehicle = () => {
                     name="vehicle_uuid"
                     value={vehicle.vehicle_uuid}
                     onChange={onInputChange}
-                    className={isDuplicate ? "border-red-500" : ""}
                     placeholder="Enter vehicle UUID"
                   />
                   {errors?.vehicle_uuid && (
                     <p className="text-red-500 text-xs">
                       {errors.vehicle_uuid}
                     </p>
-                  )}
-                  {isDuplicate && (
-                    <div className="flex items-center gap-1 text-red-500 text-xs">
-                      <AlertCircle className="w-3 h-3" />
-                      Duplicate vehicle: UUID already exists
-                    </div>
                   )}
                 </div>
 
@@ -259,19 +210,12 @@ const CreateVehicle = () => {
                     name="vehicle_number_plate"
                     value={vehicle.vehicle_number_plate}
                     onChange={onInputChange}
-                    className={isDuplicate ? "border-red-500" : ""}
                     placeholder="Enter vehicle number plate"
                   />
                   {errors?.vehicle_number_plate && (
                     <p className="text-red-500 text-xs">
                       {errors.vehicle_number_plate}
                     </p>
-                  )}
-                  {isDuplicate && (
-                    <div className="flex items-center gap-1 text-red-500 text-xs">
-                      <AlertCircle className="w-3 h-3" />
-                      Duplicate vehicle: Number plate already exists
-                    </div>
                   )}
                 </div>
 
@@ -280,7 +224,7 @@ const CreateVehicle = () => {
                     htmlFor="vehicle_product_type"
                     className="text-xs font-medium"
                   >
-                    Vehicle Type
+                    Running Platform
                   </Label>
                   <Select
                     value={vehicle.vehicle_product_type}
@@ -292,7 +236,7 @@ const CreateVehicle = () => {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select vehicle type" />
+                      <SelectValue placeholder="Select Running Platform" />
                     </SelectTrigger>
                     <SelectContent>
                       {VEHICLE_PRODUCT_TYPES.map((type) => (
@@ -302,6 +246,88 @@ const CreateVehicle = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid grid-cols-4 col-span-3 gap-4">
+                  <div>
+                    <Label
+                      htmlFor="vehicle_variant"
+                      className="text-xs font-medium"
+                    >
+                      Variant
+                    </Label>
+                    <Input
+                      id="vehicle_variant"
+                      name="vehicle_variant"
+                      value={vehicle.vehicle_variant}
+                      onChange={onInputChange}
+                      placeholder="Enter vehicle variant"
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="merchant_id"
+                      className="text-xs font-medium"
+                    >
+                      Merchant ID
+                    </Label>
+                    <Input
+                      id="merchant_id"
+                      name="merchant_id"
+                      value={vehicle.merchant_id}
+                      onChange={onInputChange}
+                      placeholder="Enter merchant ID"
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="vehicle_umbrella"
+                      className="text-xs font-medium"
+                    >
+                      Umbrella
+                    </Label>
+                    <Select
+                      value={vehicle.vehicle_umbrella}
+                      onValueChange={(value) =>
+                        setVehicle((prev) => ({
+                          ...prev,
+                          vehicle_umbrella: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="vehicle_tissue_box"
+                      className="text-xs font-medium"
+                    >
+                      Tissue Box
+                    </Label>
+                    <Select
+                      value={vehicle.vehicle_tissue_box}
+                      onValueChange={(value) =>
+                        setVehicle((prev) => ({
+                          ...prev,
+                          vehicle_tissue_box: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>

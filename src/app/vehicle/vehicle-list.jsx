@@ -14,7 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import BASE_URL from "@/config/base-url";
 import useNumericInput from "@/hooks/use-numeric-input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +33,17 @@ import {
 } from "@tanstack/react-table";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Edit, Search, SquarePlus, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Search,
+  SquarePlus,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -47,8 +62,8 @@ const VehicleList = () => {
 
   const [pageInput, setPageInput] = useState("");
   const storeCurrentPage = () => {
-    Cookies.set("vehicleReturnPage", (pagination.pageIndex + 1).toString(), { 
-      expires: 1 
+    Cookies.set("vehicleReturnPage", (pagination.pageIndex + 1).toString(), {
+      expires: 1,
     });
   };
 
@@ -64,11 +79,11 @@ const VehicleList = () => {
         `${BASE_URL}/api/vehicles/${vehicleId}/status`,
         { vehicle_status: newStatus },
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-        }
+        },
       );
       return response.data;
     },
@@ -91,11 +106,11 @@ const VehicleList = () => {
     const savedPage = Cookies.get("vehicleReturnPage");
     if (savedPage) {
       Cookies.remove("vehicleReturnPage");
-      
+
       setTimeout(() => {
         const pageIndex = parseInt(savedPage) - 1;
         if (pageIndex >= 0) {
-          setPagination(prev => ({ ...prev, pageIndex }));
+          setPagination((prev) => ({ ...prev, pageIndex }));
           setPageInput(savedPage);
 
           queryClient.invalidateQueries({
@@ -109,12 +124,13 @@ const VehicleList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-      
+      const isNewSearch =
+        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
+
       if (isNewSearch) {
-        setPagination(prev => ({ ...prev, pageIndex: 0 }));
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
       }
-      
+
       setDebouncedSearchTerm(searchTerm);
       setPreviousSearchTerm(searchTerm);
     }, 500);
@@ -137,20 +153,17 @@ const VehicleList = () => {
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
-      
+
       if (debouncedSearchTerm) {
         params.append("search", debouncedSearchTerm);
       }
 
-      const response = await axios.get(
-        `${BASE_URL}/api/vehicle?${params}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-        }
-      );
+      const response = await axios.get(`${BASE_URL}/api/vehicle?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       return response.data.data;
     },
     keepPreviousData: true,
@@ -160,7 +173,7 @@ const VehicleList = () => {
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = vehiclesData?.last_page || 1;
-    
+
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
@@ -170,7 +183,7 @@ const VehicleList = () => {
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
-          
+
           if (debouncedSearchTerm) {
             params.append("search", debouncedSearchTerm);
           }
@@ -178,11 +191,11 @@ const VehicleList = () => {
           const response = await axios.get(
             `${BASE_URL}/api/vehicle?${params}`,
             {
-              headers: { 
+              headers: {
                 Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
               },
-            }
+            },
           );
           return response.data.data;
         },
@@ -192,8 +205,10 @@ const VehicleList = () => {
 
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-    
-      if (!queryClient.getQueryData(["vehicles", debouncedSearchTerm, prevPage])) {
+
+      if (
+        !queryClient.getQueryData(["vehicles", debouncedSearchTerm, prevPage])
+      ) {
         queryClient.prefetchQuery({
           queryKey: ["vehicles", debouncedSearchTerm, prevPage],
           queryFn: async () => {
@@ -201,7 +216,7 @@ const VehicleList = () => {
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
-            
+
             if (debouncedSearchTerm) {
               params.append("search", debouncedSearchTerm);
             }
@@ -209,11 +224,11 @@ const VehicleList = () => {
             const response = await axios.get(
               `${BASE_URL}/api/vehicle?${params}`,
               {
-                headers: { 
+                headers: {
                   Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
                 },
-              }
+              },
             );
             return response.data.data;
           },
@@ -221,7 +236,12 @@ const VehicleList = () => {
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, vehiclesData?.last_page]);
+  }, [
+    pagination.pageIndex,
+    debouncedSearchTerm,
+    queryClient,
+    vehiclesData?.last_page,
+  ]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -235,7 +255,8 @@ const VehicleList = () => {
       id: "S. No.",
       header: "S. No.",
       cell: ({ row }) => {
-        const globalIndex = (pagination.pageIndex * pagination.pageSize) + row.index + 1;
+        const globalIndex =
+          pagination.pageIndex * pagination.pageSize + row.index + 1;
         return <div className="text-xs font-medium">{globalIndex}</div>;
       },
       size: 60,
@@ -254,14 +275,22 @@ const VehicleList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-[13px] font-medium">{row.getValue("Number Plate")}</div>,
+      cell: ({ row }) => (
+        <div className="text-[13px] font-medium">
+          {row.getValue("Number Plate")}
+        </div>
+      ),
       size: 120,
     },
     {
-      accessorKey: "vehicle_uuid",
-      id: "Vehicle UUID", 
-      header: "Vehicle UUID",
-      cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("Vehicle UUID")}</div>,
+      accessorKey: "vehicle_variant",
+      id: "Vehicle Variant",
+      header: "Variant",
+      cell: ({ row }) => (
+        <div className="text-xs font-mono">
+          {row.getValue("Vehicle Variant")}
+        </div>
+      ),
       size: 200,
     },
     {
@@ -274,12 +303,32 @@ const VehicleList = () => {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="px-2 h-8 text-xs"
         >
-          Product Type
+          Running Platform
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-xs">{row.getValue("Product Type")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs">{row.getValue("Product Type")}</div>
+      ),
       size: 100,
+    },
+    {
+      accessorKey: "vehicle_umbrella",
+      id: "Umbrella",
+      header: "Umbrella",
+      cell: ({ row }) => (
+        <div className="text-xs font-mono">{row.getValue("Umbrella")}</div>
+      ),
+      size: 200,
+    },
+    {
+      accessorKey: "vehicle_tissue_box",
+      id: "Tissue Box",
+      header: "Tissue Box",
+      cell: ({ row }) => (
+        <div className="text-xs font-mono">{row.getValue("Tissue Box")}</div>
+      ),
+      size: 200,
     },
     {
       accessorKey: "vehicle_status",
@@ -316,7 +365,9 @@ const VehicleList = () => {
                   ) : (
                     <ToggleLeft className="h-5 w-5 text-red-600" />
                   )}
-                  <span className={`ml-2 text-xs font-medium ${isActive ? 'text-green-600' : 'text-red-600'}`}>
+                  <span
+                    className={`ml-2 text-xs font-medium ${isActive ? "text-green-600" : "text-red-600"}`}
+                  >
                     {status}
                   </span>
                 </Button>
@@ -391,10 +442,14 @@ const VehicleList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["vehicles", debouncedSearchTerm, targetPage]);
-    
+    const cachedData = queryClient.getQueryData([
+      "vehicles",
+      debouncedSearchTerm,
+      targetPage,
+    ]);
+
     if (cachedData) {
-      setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));
+      setPagination((prev) => ({ ...prev, pageIndex: newPageIndex }));
     } else {
       table.setPageIndex(newPageIndex);
     }
@@ -403,7 +458,7 @@ const VehicleList = () => {
   const handlePageInput = (e) => {
     const value = e.target.value;
     setPageInput(value);
-    
+
     if (value && !isNaN(value)) {
       const pageNum = parseInt(value);
       if (pageNum >= 1 && pageNum <= table.getPageCount()) {
@@ -416,7 +471,7 @@ const VehicleList = () => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = table.getPageCount();
     const buttons = [];
-    
+
     buttons.push(
       <Button
         key={1}
@@ -426,14 +481,22 @@ const VehicleList = () => {
         className="h-8 w-8 p-0 text-xs"
       >
         1
-      </Button>
+      </Button>,
     );
 
     if (currentPage > 3) {
-      buttons.push(<span key="ellipsis1" className="px-2">...</span>);
+      buttons.push(
+        <span key="ellipsis1" className="px-2">
+          ...
+        </span>,
+      );
     }
 
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+    for (
+      let i = Math.max(2, currentPage - 1);
+      i <= Math.min(totalPages - 1, currentPage + 1);
+      i++
+    ) {
       if (i !== 1 && i !== totalPages) {
         buttons.push(
           <Button
@@ -444,13 +507,17 @@ const VehicleList = () => {
             className="h-8 w-8 p-0 text-xs"
           >
             {i}
-          </Button>
+          </Button>,
         );
       }
     }
 
     if (currentPage < totalPages - 2) {
-      buttons.push(<span key="ellipsis2" className="px-2">...</span>);
+      buttons.push(
+        <span key="ellipsis2" className="px-2">
+          ...
+        </span>,
+      );
     }
 
     if (totalPages > 1) {
@@ -463,7 +530,7 @@ const VehicleList = () => {
           className="h-8 w-8 p-0 text-xs"
         >
           {totalPages}
-        </Button>
+        </Button>,
       );
     }
 
@@ -472,16 +539,16 @@ const VehicleList = () => {
 
   const TableShimmer = () => {
     return Array.from({ length: 10 }).map((_, index) => (
-      <TableRow key={index} className="animate-pulse h-11"> 
+      <TableRow key={index} className="animate-pulse h-11">
         {table.getVisibleFlatColumns().map((column) => (
           <TableCell key={column.id} className="py-1">
-            <div className="h-8 bg-gray-200 rounded w-full"></div> 
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
           </TableCell>
         ))}
       </TableRow>
     ));
   };
-  
+
   if (isError) {
     return (
       <div className="w-full p-4  ">
@@ -532,17 +599,16 @@ const VehicleList = () => {
                     key={column.id}
                     className="text-xs capitalize"
                     checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link 
-            to='/vehicle/vehicle-create'
-            onClick={storeCurrentPage}
-          >
+          <Link to="/vehicle/vehicle-create" onClick={storeCurrentPage}>
             <Button variant="default">
               <SquarePlus className="h-3 w-3 mr-2" /> Create Vehicle
             </Button>
@@ -556,8 +622,8 @@ const VehicleList = () => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead 
-                    key={header.id} 
+                  <TableHead
+                    key={header.id}
                     className="h-10 px-3 bg-[var(--team-color)] text-[var(--label-color)]  text-sm font-medium"
                     style={{ width: header.column.columnDef.size }}
                   >
@@ -565,14 +631,14 @@ const VehicleList = () => {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
-          
+
           <TableBody>
             {isFetching && !table.getRowModel().rows.length ? (
               <TableShimmer />
@@ -587,15 +653,18 @@ const VehicleList = () => {
                     <TableCell key={cell.id} className="px-3 py-1">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
-              <TableRow className="h-12"> 
-                <TableCell colSpan={columns.length} className="h-24 text-center text-sm">
+              <TableRow className="h-12">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-sm"
+                >
                   No vehicles found.
                 </TableCell>
               </TableRow>
@@ -609,7 +678,7 @@ const VehicleList = () => {
           Showing {vehiclesData?.from || 0} to {vehiclesData?.to || 0} of{" "}
           {vehiclesData?.total || 0} vehicles
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
@@ -620,7 +689,7 @@ const VehicleList = () => {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <div className="flex items-center space-x-1">
             {generatePageButtons()}
           </div>

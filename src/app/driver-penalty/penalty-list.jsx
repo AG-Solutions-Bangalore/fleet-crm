@@ -179,7 +179,11 @@ const PenaltyList = () => {
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["penalties"] });
-      const queryKey = ["penalties", debouncedSearchTerm, pagination.pageIndex + 1];
+      const queryKey = [
+        "penalties",
+        debouncedSearchTerm,
+        pagination.pageIndex + 1,
+      ];
       const previousData = queryClient.getQueryData(queryKey);
 
       queryClient.setQueryData(queryKey, (old) => {
@@ -314,8 +318,11 @@ const PenaltyList = () => {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="text-[13px]">{moment(row.getValue("Penalty Date")).format("DD-MM-YYYY")}</div>
+        <div className="text-[13px]">
+          {moment(row.getValue("Penalty Date")).format("DD-MM-YYYY")}
+        </div>
       ),
+      size: 100,
     },
     {
       accessorKey: "driver_full_name",
@@ -340,11 +347,28 @@ const PenaltyList = () => {
     {
       accessorKey: "performance_type",
       id: "Performance Type",
-      header: "Performance Type",
+      header: "Running Platform",
       cell: ({ row }) => (
         <div className="text-[13px]">{row.getValue("Performance Type")}</div>
       ),
     },
+    {
+      accessorKey: "penalty_for",
+      id: "Penalty For",
+      header: "Penalty For",
+      cell: ({ row }) => (
+        <div className="text-[13px]">{row.getValue("Penalty For")}</div>
+      ),
+    },
+    {
+      accessorKey: "penalty_type",
+      id: "Penalty Type",
+      header: "Penalty Type",
+      cell: ({ row }) => (
+        <div className="text-[13px]">{row.getValue("Penalty Type")}</div>
+      ),
+    },
+
     {
       accessorKey: "penalty_amount",
       id: "Amount",
@@ -370,10 +394,7 @@ const PenaltyList = () => {
       id: "Details",
       header: "Details",
       cell: ({ row }) => (
-        <div
-          className="text-[13px] truncate max-w-[200px]"
-          title={row.getValue("Details")}
-        >
+        <div className="text-[13px]" title={row.getValue("Details")}>
           {row.getValue("Details")}
         </div>
       ),
@@ -631,7 +652,12 @@ const PenaltyList = () => {
       </div>
 
       {/* Table */}
-      <div className="rounded-none border min-h-[31rem] grid grid-cols-1">
+      <div className="rounded-none border min-h-[31rem] grid grid-cols-1 relative">
+        {isFetching && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-transparent overflow-hidden z-20">
+            <div className="h-full bg-white/50 animate-pulse w-full"></div>
+          </div>
+        )}
         <Table className="flex-1">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
