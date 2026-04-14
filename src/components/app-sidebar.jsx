@@ -67,10 +67,6 @@ const NAVIGATION_CONFIG = {
           title: "Vehicle",
           url: "/vehicle",
         },
-        {
-          title: "Driver QR",
-          url: "/qr-drivers",
-        },
       ],
     },
 

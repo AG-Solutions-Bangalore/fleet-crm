@@ -27,41 +27,67 @@ const EditPenalty = () => {
   const token = Cookies.get("token");
 
   const [errors, setErrors] = useState({});
-  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [initialPenalty, setInitialPenalty] = useState({});
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const [penalty, setPenalty] = useState({
     penalty_date: "",
     driver_full_name: "",
     performance_type: "",
+    penalty_type: "",
+    penalty_for: "",
     penalty_amount: "",
     penalty_details: "",
   });
 
   // Fetch specific penalty record
-  const { isLoading: isLoadingPenalty } = useQuery({
+  const { data: penaltyData, isLoading: isLoadingPenalty } = useQuery({
     queryKey: ["penalty", id],
     queryFn: async () => {
       const response = await axios.get(`${BASE_URL}/api/driver-penalty/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = response.data?.data;
-      if (data) {
-        const cleanedData = {
-          penalty_date: data.penalty_date || "",
-          driver_full_name: data.driver_full_name || "",
-          performance_type: data.performance_type || "",
-          penalty_amount: data.penalty_amount || "",
-          penalty_details: data.penalty_details || "",
-        };
-        setPenalty(cleanedData);
-        setInitialPenalty(cleanedData);
-      }
-      return data;
+      return response.data?.data || response.data;
     },
     enabled: !!id,
   });
+
+  // Sync penalty data to state when loaded (including from cache)
+  useEffect(() => {
+    if (penaltyData) {
+      const d = penaltyData;
+      const formattedDate = d.penalty_date ? d.penalty_date.split(" ")[0] : "";
+      
+      const cleanedData = {
+        id: d.id,
+        penalty_date: d.penalty_date || "",
+        driver_full_name: d.driver_full_name || "",
+        performance_type: d.performance_type || "",
+        penalty_type: d.penalty_type || "",
+        penalty_for: d.penalty_for || "",
+        penalty_amount: d.penalty_amount || "",
+        penalty_details: d.penalty_details || "",
+      };
+
+      // Initialize state only if we have data and haven't initialized for THIS ID yet
+      if (id && (!hasInitialized || initialPenalty.id?.toString() !== id.toString())) {
+        setPenalty(cleanedData);
+        setInitialPenalty(cleanedData);
+        setHasInitialized(true);
+      }
+    }
+  }, [penaltyData, id, hasInitialized, initialPenalty.id]);
+
+  // Reset initialization flag when ID changes to allow re-fetching different records
+  useEffect(() => {
+    setHasInitialized(false);
+  }, [id]);
+
+  useEffect(() => {
+    const isDirty = JSON.stringify(penalty) !== JSON.stringify(initialPenalty);
+    setIsFormDirty(isDirty);
+  }, [penalty, initialPenalty]);
 
   // Fetch Drivers
   const { data: driversData, isLoading: isLoadingDrivers } = useQuery({
@@ -70,14 +96,40 @@ const EditPenalty = () => {
       const response = await axios.get(`${BASE_URL}/api/depositDriver`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data.data || [];
+      const data = response.data.data || [];
+      // Deduplicate by name just in case API returns duplicates
+      const uniqueDrivers = Array.from(new Set(data.map(d => d.driver_full_name)))
+        .map(name => data.find(d => d.driver_full_name === name));
+      return uniqueDrivers;
     },
   });
 
-  useEffect(() => {
-    const isDirty = JSON.stringify(penalty) !== JSON.stringify(initialPenalty);
-    setIsFormDirty(isDirty);
-  }, [penalty, initialPenalty]);
+  // Fetch Penalty For Options when Penalty Type changes
+  const { data: penaltyForOptions, isLoading: isLoadingPenaltyFor } = useQuery({
+    queryKey: ["penalty-for-options", penalty.penalty_type],
+    queryFn: async () => {
+      if (!penalty.penalty_type) return [];
+      const response = await axios.get(
+        `${BASE_URL}/api/getPenaltyType/${penalty.penalty_type}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+      
+      // Deduplicate options to fix React duplicate key warning
+      const seen = new Set();
+      const uniqueOptions = data.filter(opt => {
+        const val = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.value || opt.id);
+        const duplicate = seen.has(val);
+        seen.add(val);
+        return !duplicate;
+      });
+      
+      return uniqueOptions;
+    },
+    enabled: !!penalty.penalty_type,
+  });
 
   const onInputChange = (e) => {
     const { name, value } = e.target;
@@ -88,14 +140,24 @@ const EditPenalty = () => {
   };
 
   const onSelectChange = (name, value) => {
-    setPenalty((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setPenalty((prev) => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
+      
+      // Reset dependent select only if type actually changes and it's not the initial value load
+      // We check prev.penalty_type !== "" to ensure we don't clear it when the first real data is being mapped
+      if (name === "penalty_type" && value !== prev.penalty_type && prev.penalty_type !== "") {
+        updated.penalty_for = "";
+      }
+
+      return updated;
+    });
 
     if (name === "driver_full_name") {
       const selectedDriver = driversData?.find(
-        (d) => d.driver_full_name === value,
+        (d) => (d.driver_full_name || "").trim().toLowerCase() === (value || "").trim().toLowerCase(),
       );
       if (selectedDriver && selectedDriver.performance_type) {
         setPenalty((prev) => ({
@@ -120,6 +182,14 @@ const EditPenalty = () => {
     }
     if (!penalty.performance_type) {
       newErrors.performance_type = "Performance Type is required";
+      isValid = false;
+    }
+    if (!penalty.penalty_type) {
+      newErrors.penalty_type = "Penalty Type is required";
+      isValid = false;
+    }
+    if (!penalty.penalty_for) {
+      newErrors.penalty_for = "Penalty For is required";
       isValid = false;
     }
     if (!penalty.penalty_amount) {
@@ -180,6 +250,8 @@ const EditPenalty = () => {
       formData.append("penalty_date", penalty.penalty_date);
       formData.append("driver_full_name", penalty.driver_full_name);
       formData.append("performance_type", penalty.performance_type);
+      formData.append("penalty_type", penalty.penalty_type);
+      formData.append("penalty_for", penalty.penalty_for);
       formData.append("penalty_amount", penalty.penalty_amount);
       formData.append("penalty_details", penalty.penalty_details || "");
       formData.append("_method", "PUT"); // Method spoofing for PHP multipart/form-data PUT
@@ -194,8 +266,12 @@ const EditPenalty = () => {
 
   if (isLoadingPenalty) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex flex-col justify-center items-center h-[60vh] gap-4">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-[var(--team-color)]/20 rounded-full"></div>
+          <div className="absolute top-0 left-0 w-12 h-12 border-4 border-t-[var(--team-color)] rounded-full animate-spin"></div>
+        </div>
+        <p className="text-sm font-medium text-gray-500 animate-pulse">Loading penalty data...</p>
       </div>
     );
   }
@@ -243,7 +319,7 @@ const EditPenalty = () => {
                 Penalty Details
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 {/* Penalty Date */}
                 <div className="space-y-1">
                   <Label htmlFor="penalty_date" className="text-xs font-medium">
@@ -288,11 +364,22 @@ const EditPenalty = () => {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {driversData?.map((driver, index) => (
-                        <SelectItem key={index} value={driver.driver_full_name}>
-                          {driver.driver_full_name}
-                        </SelectItem>
-                      ))}
+                      {(() => {
+                        const finalDrivers = [...(driversData || [])];
+                        const currentDriver = penalty.driver_full_name;
+
+                        if (currentDriver && !finalDrivers.some(d => 
+                          (d.driver_full_name || "").trim().toLowerCase() === currentDriver.trim().toLowerCase()
+                        )) {
+                          finalDrivers.unshift({ driver_full_name: currentDriver });
+                        }
+
+                        return finalDrivers.map((driver, index) => (
+                          <SelectItem key={index} value={driver.driver_full_name}>
+                            {driver.driver_full_name}
+                          </SelectItem>
+                        ));
+                      })()}
                     </SelectContent>
                   </Select>
                   {errors?.driver_full_name && (
@@ -308,7 +395,7 @@ const EditPenalty = () => {
                     htmlFor="performance_type"
                     className="text-xs font-medium"
                   >
-                    Performance Type *
+                    Running Platform
                   </Label>
                   <Input
                     id="performance_type"
@@ -316,12 +403,99 @@ const EditPenalty = () => {
                     disabled
                     value={penalty.performance_type}
                     onChange={onInputChange}
-                    placeholder="Enter Performance Type"
+                    placeholder="Running Platform"
                   />
                   {errors?.performance_type && (
                     <p className="text-red-500 text-xs">
                       {errors.performance_type}
                     </p>
+                  )}
+                </div>
+
+                {/* Penalty Type */}
+                <div className="space-y-1">
+                  <Label htmlFor="penalty_type" className="text-xs font-medium">
+                    Penalty Type *
+                  </Label>
+                  <Select
+                    id="penalty_type"
+                    name="penalty_type"
+                    value={penalty.penalty_type}
+                    onValueChange={(value) =>
+                      onSelectChange("penalty_type", value)
+                    }
+                  >
+                    <SelectTrigger id="penalty_type">
+                      <SelectValue placeholder="Select Penalty Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Debit">Debit</SelectItem>
+                      <SelectItem value="Credit">Credit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors?.penalty_type && (
+                    <p className="text-red-500 text-xs">
+                      {errors.penalty_type}
+                    </p>
+                  )}
+                </div>
+
+                {/* Penalty For */}
+                <div className="space-y-1">
+                  <Label htmlFor="penalty_for" className="text-xs font-medium">
+                    Penalty For *
+                  </Label>
+                  <Select
+                    id="penalty_for"
+                    name="penalty_for"
+                    value={penalty.penalty_for}
+                    onValueChange={(value) =>
+                      onSelectChange("penalty_for", value)
+                    }
+                  >
+                    <SelectTrigger id="penalty_for">
+                      <div className="flex items-center gap-2">
+                        {isLoadingPenaltyFor && (
+                          <div className="w-3 h-3 border-2 border-[var(--team-color)] border-t-transparent rounded-full animate-spin" />
+                        )}
+                        <SelectValue placeholder={isLoadingPenaltyFor ? "Loading options..." : "Select Penalty For"} />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(() => {
+                        // Ensure existing value is in options list to avoid showing blank placeholder
+                        const finalOptions = [...(penaltyForOptions || [])];
+                        const currentVal = penalty.penalty_for;
+                        
+                        if (currentVal && !finalOptions.some(opt => {
+                          const val = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.value || opt.id);
+                          // Case-insensitive trimmed comparison for robust matching
+                          return val?.toString().trim().toLowerCase() === currentVal?.toString().trim().toLowerCase();
+                        })) {
+                          // Inject current value so Select component can display it correctly
+                          finalOptions.unshift(currentVal);
+                        }
+
+                        return finalOptions.length > 0 ? (
+                          finalOptions.map((opt, idx) => {
+                            const val = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.value || opt.id);
+                            const label = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.label || val);
+                            return (
+                              <SelectItem key={idx} value={val?.toString() || ""}>
+                                {label}
+                              </SelectItem>
+                            );
+                          })
+                        ) : (
+                          <div className="p-2 text-sm text-center text-gray-500">
+                            {penalty.penalty_type ? "No options available" : "Select Penalty Type first"}
+                          </div>
+                        );
+                      })()}
+                    </SelectContent>
+                  </Select>
+                  {errors?.penalty_for && (
+                    <p className="text-red-500 text-xs">{errors.penalty_for}</p>
                   )}
                 </div>
 

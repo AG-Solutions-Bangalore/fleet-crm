@@ -76,6 +76,10 @@ const EditVehicle = () => {
     vehicle_number_plate: "",
     vehicle_product_type: "",
     vehicle_status: "",
+    vehicle_variant: "",
+    merchant_id: "",
+    vehicle_umbrella: "",
+    vehicle_tissue_box: "",
   });
 
   // Assign Driver State
@@ -92,6 +96,10 @@ const EditVehicle = () => {
     driver_fullname: "",
     vehicles_sub_start_date: "",
     vehicles_sub_end_date: "",
+    vehicles_sub_variant: "",
+    merchant_id: "",
+    vehicle_umbrella: "",
+    vehicle_tissue_box: "",
     vehicles_sub_status: "Active",
   });
 
@@ -366,6 +374,10 @@ const EditVehicle = () => {
     formData.append("vehicle_number_plate", vehicle.vehicle_number_plate || "");
     formData.append("vehicle_product_type", vehicle.vehicle_product_type || "");
     formData.append("vehicle_status", vehicle.vehicle_status || "");
+    formData.append("vehicle_variant", vehicle.vehicle_variant || "");
+    formData.append("merchant_id", vehicle.merchant_id || "");
+    formData.append("vehicle_umbrella", vehicle.vehicle_umbrella || "");
+    formData.append("vehicle_tissue_box", vehicle.vehicle_tissue_box || "");
 
     setIsButtonDisabled(true);
     updateVehicleMutation.mutate(formData);
@@ -426,7 +438,7 @@ const EditVehicle = () => {
                 Vehicle Details
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
                 <div className="">
                   <Label htmlFor="vehicle_uuid" className="text-xs font-medium">
                     Vehicle UUID *
@@ -516,6 +528,9 @@ const EditVehicle = () => {
                     <SelectContent>
                       <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="Under Maintenance">
+                        Under Maintenance
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   {errors?.vehicle_status && (
@@ -523,6 +538,105 @@ const EditVehicle = () => {
                       {errors.vehicle_status}
                     </p>
                   )}
+                </div>
+
+                <div className="">
+                  <Label
+                    htmlFor="vehicle_variant"
+                    className="text-xs font-medium"
+                  >
+                    Vehicle Variant
+                  </Label>
+                  <Input
+                    id="vehicle_variant"
+                    type="text"
+                    value={vehicle.vehicle_variant || ""}
+                    onChange={(e) =>
+                      setVehicle((prev) => ({
+                        ...prev,
+                        vehicle_variant: e.target.value,
+                      }))
+                    }
+                  />
+                  {errors?.vehicle_variant && (
+                    <p className="text-red-500 text-xs">
+                      {errors.vehicle_variant}
+                    </p>
+                  )}
+                </div>
+
+                <div className="">
+                  <Label htmlFor="merchant_id" className="text-xs font-medium">
+                    Merchant ID
+                  </Label>
+                  <Input
+                    id="merchant_id"
+                    type="text"
+                    placeholder="Merchant ID"
+                    value={vehicle.merchant_id || ""}
+                    onChange={(e) =>
+                      setVehicle((prev) => ({
+                        ...prev,
+                        merchant_id: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="">
+                  <Label
+                    htmlFor="vehicle_umbrella"
+                    className="text-xs font-medium"
+                  >
+                    Vehicle Umbrella
+                  </Label>
+                  <Select
+                    id="vehicle_umbrella"
+                    value={vehicle.vehicle_umbrella || ""}
+                    onValueChange={(value) =>
+                      setVehicle((prev) => ({
+                        ...prev,
+                        vehicle_umbrella: value,
+                      }))
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select umbrella" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Yes">Yes</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="">
+                  <Label
+                    htmlFor="vehicle_tissue_box"
+                    className="text-xs font-medium"
+                  >
+                    Vehicle Tissue Box
+                  </Label>
+                  <Select
+                    id="vehicle_tissue_box"
+                    value={vehicle.vehicle_tissue_box || ""}
+                    onValueChange={(value) =>
+                      setVehicle((prev) => ({
+                        ...prev,
+                        vehicle_tissue_box: value,
+                      }))
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select tissue box" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Yes">Yes</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

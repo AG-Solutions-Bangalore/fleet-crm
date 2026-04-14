@@ -14,7 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import BASE_URL from "@/config/base-url";
 import useNumericInput from "@/hooks/use-numeric-input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,9 +33,21 @@ import {
 } from "@tanstack/react-table";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Edit, Search, SquarePlus, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Search,
+  SquarePlus,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import ImageCell from "@/components/common/ImageCell";
+import { getImageBaseUrl, getNoImageUrl } from "@/utils/imageUtils";
 
 const DriverList = () => {
   const queryClient = useQueryClient();
@@ -47,8 +64,8 @@ const DriverList = () => {
 
   const [pageInput, setPageInput] = useState("");
   const storeCurrentPage = () => {
-    Cookies.set("driverReturnPage", (pagination.pageIndex + 1).toString(), { 
-      expires: 1 
+    Cookies.set("driverReturnPage", (pagination.pageIndex + 1).toString(), {
+      expires: 1,
     });
   };
 
@@ -57,7 +74,6 @@ const DriverList = () => {
     navigate(`/driver/driver-edit/${id}`);
   };
 
-  
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ driverId, newStatus }) => {
       const token = Cookies.get("token");
@@ -65,23 +81,21 @@ const DriverList = () => {
         `${BASE_URL}/api/drivers/${driverId}/status`,
         { status: newStatus },
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-        }
+        },
       );
       return response.data;
     },
     onSuccess: () => {
-     
       queryClient.invalidateQueries({
         queryKey: ["drivers", debouncedSearchTerm, pagination.pageIndex + 1],
       });
     },
     onError: (error) => {
       console.error("Failed to update driver status:", error);
-
     },
   });
 
@@ -90,16 +104,15 @@ const DriverList = () => {
     toggleStatusMutation.mutate({ driverId, newStatus });
   };
 
-
   useEffect(() => {
     const savedPage = Cookies.get("driverReturnPage");
     if (savedPage) {
       Cookies.remove("driverReturnPage");
-      
+
       setTimeout(() => {
         const pageIndex = parseInt(savedPage) - 1;
         if (pageIndex >= 0) {
-          setPagination(prev => ({ ...prev, pageIndex }));
+          setPagination((prev) => ({ ...prev, pageIndex }));
           setPageInput(savedPage);
 
           queryClient.invalidateQueries({
@@ -113,12 +126,13 @@ const DriverList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-      
+      const isNewSearch =
+        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
+
       if (isNewSearch) {
-        setPagination(prev => ({ ...prev, pageIndex: 0 }));
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
       }
-      
+
       setDebouncedSearchTerm(searchTerm);
       setPreviousSearchTerm(searchTerm);
     }, 500);
@@ -129,7 +143,7 @@ const DriverList = () => {
   }, [searchTerm, previousSearchTerm]);
 
   const {
-    data: driversData,
+    data: driversPayload,
     isLoading,
     isError,
     refetch,
@@ -141,30 +155,33 @@ const DriverList = () => {
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
-      
+
       if (debouncedSearchTerm) {
         params.append("search", debouncedSearchTerm);
       }
 
-      const response = await axios.get(
-        `${BASE_URL}/api/driver?${params}`,
-        {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-        }
-      );
-      return response.data.data;
+      const response = await axios.get(`${BASE_URL}/api/driver?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      return response.data;
     },
     keepPreviousData: true,
     staleTime: 5 * 60 * 1000,
   });
 
+  const driversData = driversPayload?.data;
+  const image_url_array = driversPayload?.image_url || [];
+  const IMAGE_FOR = "Driver";
+  const driverImageBaseUrl = getImageBaseUrl(image_url_array, IMAGE_FOR);
+  const noImageUrl = getNoImageUrl(image_url_array);
+
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = driversData?.last_page || 1;
-    
+
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
@@ -174,21 +191,18 @@ const DriverList = () => {
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
-          
+
           if (debouncedSearchTerm) {
             params.append("search", debouncedSearchTerm);
           }
 
-          const response = await axios.get(
-            `${BASE_URL}/api/driver?${params}`,
-            {
-              headers: { 
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json"
-              },
-            }
-          );
-          return response.data.data;
+          const response = await axios.get(`${BASE_URL}/api/driver?${params}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          return response.data;
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -196,8 +210,10 @@ const DriverList = () => {
 
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-    
-      if (!queryClient.getQueryData(["drivers", debouncedSearchTerm, prevPage])) {
+
+      if (
+        !queryClient.getQueryData(["drivers", debouncedSearchTerm, prevPage])
+      ) {
         queryClient.prefetchQuery({
           queryKey: ["drivers", debouncedSearchTerm, prevPage],
           queryFn: async () => {
@@ -205,7 +221,7 @@ const DriverList = () => {
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
-            
+
             if (debouncedSearchTerm) {
               params.append("search", debouncedSearchTerm);
             }
@@ -213,24 +229,29 @@ const DriverList = () => {
             const response = await axios.get(
               `${BASE_URL}/api/driver?${params}`,
               {
-                headers: { 
+                headers: {
                   Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
                 },
-              }
+              },
             );
-            return response.data.data;
+            return response.data;
           },
           staleTime: 5 * 60 * 1000,
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, driversData?.last_page]);
+  }, [
+    pagination.pageIndex,
+    debouncedSearchTerm,
+    queryClient,
+    driversData?.last_page,
+  ]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({
-    "UUID": false,
+    UUID: false,
   });
   const [rowSelection, setRowSelection] = useState({});
 
@@ -239,10 +260,40 @@ const DriverList = () => {
       id: "S. No.",
       header: "S. No.",
       cell: ({ row }) => {
-        const globalIndex = (pagination.pageIndex * pagination.pageSize) + row.index + 1;
+        const globalIndex =
+          pagination.pageIndex * pagination.pageSize + row.index + 1;
         return <div className="text-xs font-medium">{globalIndex}</div>;
       },
       size: 60,
+    },
+    {
+      id: "selfie_image",
+      header: "Image",
+      cell: ({ row }) => {
+        const fileName = row.original.selfie_image;
+        let src;
+        if (fileName) {
+          if (fileName.startsWith("http")) {
+            src = fileName;
+          } else {
+            src = `${driverImageBaseUrl}${fileName}`;
+          }
+        } else {
+          src = noImageUrl;
+        }
+
+        return (
+          <ImageCell
+            src={src}
+            fallback={noImageUrl}
+            alt="Selfie"
+            width={40}
+            height={40}
+            className="rounded-md w-10 h-10 object-cover"
+          />
+        );
+      },
+      size: 80,
     },
     {
       accessorKey: "name",
@@ -267,9 +318,11 @@ const DriverList = () => {
     },
     {
       accessorKey: "UUID",
-      id: "UUID", 
+      id: "UUID",
       header: "UUID",
-      cell: ({ row }) => <div className="text-xs font-mono">{row.getValue("UUID")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs font-mono">{row.getValue("UUID")}</div>
+      ),
       size: 200,
     },
     {
@@ -278,14 +331,56 @@ const DriverList = () => {
       cell: ({ row }) => (
         <div className="space-y-1">
           <div className="text-xs">
-            <span className="font-medium">Email:</span> {row.original.email || "-"}
+            <span className="font-medium">Email:</span>{" "}
+            {row.original.email || "-"}
           </div>
           <div className="text-xs">
-            <span className="font-medium">Mobile:</span> {row.original.mobile || "-"}
+            <span className="font-medium">Mobile:</span>{" "}
+            {row.original.mobile || "-"}
           </div>
         </div>
       ),
       size: 150,
+    },
+    {
+      id: "aadhar_no",
+      header: "Aadhar No",
+      cell: ({ row }) => (
+        <div className="text-xs">{row.original.aadhar_no || "-"}</div>
+      ),
+      size: 120,
+    },
+    {
+      id: "dl_expiry_date",
+      header: "DL Expiry",
+      cell: ({ row }) => (
+        <div className="text-xs">{row.original.dl_expiry_date || "-"}</div>
+      ),
+      size: 120,
+    },
+    {
+      id: "dl_submitted",
+      header: "DL Submitted",
+      cell: ({ row }) => (
+        <div className="text-xs">{row.original.dl_submitted || "-"}</div>
+      ),
+      size: 120,
+    },
+    {
+      id: "pcc_status",
+      header: "PCC Status",
+      cell: ({ row }) => (
+        <div className="text-xs">{row.original.pcc_status || "-"}</div>
+      ),
+      size: 120,
+    },
+    {
+      id: "doj",
+      header: "DOJ",
+      cell: ({ row }) => (
+        <div className="text-xs">{row.original.doj || "-"}</div>
+      ),
+      size: 120,
     },
     {
       accessorKey: "status",
@@ -322,7 +417,9 @@ const DriverList = () => {
                   ) : (
                     <ToggleLeft className="h-5 w-5 text-red-600" />
                   )}
-                  <span className={`ml-2 text-xs font-medium ${isActive ? 'text-green-600' : 'text-red-600'}`}>
+                  <span
+                    className={`ml-2 text-xs font-medium ${isActive ? "text-green-600" : "text-red-600"}`}
+                  >
                     {status}
                   </span>
                 </Button>
@@ -397,10 +494,14 @@ const DriverList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["drivers", debouncedSearchTerm, targetPage]);
-    
+    const cachedData = queryClient.getQueryData([
+      "drivers",
+      debouncedSearchTerm,
+      targetPage,
+    ]);
+
     if (cachedData) {
-      setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));
+      setPagination((prev) => ({ ...prev, pageIndex: newPageIndex }));
     } else {
       table.setPageIndex(newPageIndex);
     }
@@ -409,7 +510,7 @@ const DriverList = () => {
   const handlePageInput = (e) => {
     const value = e.target.value;
     setPageInput(value);
-    
+
     if (value && !isNaN(value)) {
       const pageNum = parseInt(value);
       if (pageNum >= 1 && pageNum <= table.getPageCount()) {
@@ -422,7 +523,7 @@ const DriverList = () => {
     const currentPage = pagination.pageIndex + 1;
     const totalPages = table.getPageCount();
     const buttons = [];
-    
+
     buttons.push(
       <Button
         key={1}
@@ -432,14 +533,22 @@ const DriverList = () => {
         className="h-8 w-8 p-0 text-xs"
       >
         1
-      </Button>
+      </Button>,
     );
 
     if (currentPage > 3) {
-      buttons.push(<span key="ellipsis1" className="px-2">...</span>);
+      buttons.push(
+        <span key="ellipsis1" className="px-2">
+          ...
+        </span>,
+      );
     }
 
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+    for (
+      let i = Math.max(2, currentPage - 1);
+      i <= Math.min(totalPages - 1, currentPage + 1);
+      i++
+    ) {
       if (i !== 1 && i !== totalPages) {
         buttons.push(
           <Button
@@ -450,13 +559,17 @@ const DriverList = () => {
             className="h-8 w-8 p-0 text-xs"
           >
             {i}
-          </Button>
+          </Button>,
         );
       }
     }
 
     if (currentPage < totalPages - 2) {
-      buttons.push(<span key="ellipsis2" className="px-2">...</span>);
+      buttons.push(
+        <span key="ellipsis2" className="px-2">
+          ...
+        </span>,
+      );
     }
 
     if (totalPages > 1) {
@@ -469,7 +582,7 @@ const DriverList = () => {
           className="h-8 w-8 p-0 text-xs"
         >
           {totalPages}
-        </Button>
+        </Button>,
       );
     }
 
@@ -478,16 +591,16 @@ const DriverList = () => {
 
   const TableShimmer = () => {
     return Array.from({ length: 10 }).map((_, index) => (
-      <TableRow key={index} className="animate-pulse h-11"> 
+      <TableRow key={index} className="animate-pulse h-11">
         {table.getVisibleFlatColumns().map((column) => (
           <TableCell key={column.id} className="py-1">
-            <div className="h-8 bg-gray-200 rounded w-full"></div> 
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
           </TableCell>
         ))}
       </TableRow>
     ));
   };
-  
+
   if (isError) {
     return (
       <div className="w-full p-4  ">
@@ -538,17 +651,16 @@ const DriverList = () => {
                     key={column.id}
                     className="text-xs capitalize"
                     checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link 
-            to='/driver/driver-create'
-            onClick={storeCurrentPage}
-          >
+          <Link to="/driver/driver-create" onClick={storeCurrentPage}>
             <Button variant="default">
               <SquarePlus className="h-3 w-3 mr-2" /> Create Driver
             </Button>
@@ -563,8 +675,8 @@ const DriverList = () => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead 
-                    key={header.id} 
+                  <TableHead
+                    key={header.id}
                     className="h-10 px-3 bg-[var(--team-color)] text-[var(--label-color)]  text-sm font-medium"
                     style={{ width: header.column.columnDef.size }}
                   >
@@ -572,14 +684,14 @@ const DriverList = () => {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
-          
+
           <TableBody>
             {isFetching && !table.getRowModel().rows.length ? (
               <TableShimmer />
@@ -588,21 +700,28 @@ const DriverList = () => {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="h-2 hover:bg-gray-50"
+                  className={`h-2 hover:bg-gray-50 ${
+                    row.original.uid_match_status !== "Matched"
+                      ? "bg-red-50 hover:bg-red-100/80"
+                      : ""
+                  }`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-3 py-1">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
-              <TableRow className="h-12"> 
-                <TableCell colSpan={columns.length} className="h-24 text-center text-sm">
+              <TableRow className="h-12">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-sm"
+                >
                   No drivers found.
                 </TableCell>
               </TableRow>
@@ -617,7 +736,7 @@ const DriverList = () => {
           Showing {driversData?.from || 0} to {driversData?.to || 0} of{" "}
           {driversData?.total || 0} drivers
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
@@ -628,7 +747,7 @@ const DriverList = () => {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <div className="flex items-center space-x-1">
             {generatePageButtons()}
           </div>
