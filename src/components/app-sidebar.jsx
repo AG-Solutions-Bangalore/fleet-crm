@@ -100,6 +100,10 @@ const NAVIGATION_CONFIG = {
           title: "Daily Cash",
           url: "/daily-cash",
         },
+        {
+          title: "Vehicle Travel",
+          url: "/travel-vehicle",
+        },
       ],
     },
   },
@@ -114,6 +118,14 @@ const NAVIGATION_CONFIG = {
         {
           title: "Performance New",
           url: "/performance-new",
+        },
+        {
+          title: "Daily Distance",
+          url: "/daily-distance-report",
+        },
+        {
+          title: "Vehicle Assignment",
+          url: "/assignment-vehicle-report",
         },
       ],
     },
