@@ -27,6 +27,11 @@ import CreatePenalty from "@/app/driver-penalty/create-penalty";
 import EditPenalty from "@/app/driver-penalty/edit-penalty";
 import NewDriverPerformanceReport from "@/app/report/new-performance";
 import DailyCashList from "@/app/daily-cash/daily-cash-list";
+import VehicleTravelList from "@/app/vehicle-travel/vehicle-travel-list";
+import DailyDistanceReport from "@/app/report/daily-distance-report";
+import VehicleAssignmentReport from "@/app/report/vehicle-assignment-report";
+import ViewDriver from "@/app/driver/view-driver";
+import ViewVehicle from "@/app/vehicle/view-vehicle";
 const Login = lazy(() => import("@/app/auth/login"));
 
 const NotFound = lazy(() => import("@/app/errors/not-found"));
@@ -102,6 +107,14 @@ function AppRoutes() {
             </Suspense>
           }
         />
+        <Route
+          path="/driver/driver-view/:id"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <ViewDriver />
+            </Suspense>
+          }
+        />
 
         {/* vehicle  */}
         <Route
@@ -125,6 +138,14 @@ function AppRoutes() {
           element={
             <Suspense fallback={<LoadingBar />}>
               <EditVehicle />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/vehicle/vehicle-view/:id"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <ViewVehicle />
             </Suspense>
           }
         />
@@ -168,6 +189,15 @@ function AppRoutes() {
             </Suspense>
           }
         />
+        {/* daily cash */}
+        <Route
+          path="/travel-vehicle"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <VehicleTravelList />
+            </Suspense>
+          }
+        />
         <Route
           path="/report"
           element={
@@ -200,6 +230,22 @@ function AppRoutes() {
           element={
             <Suspense fallback={<LoadingBar />}>
               <NewDriverPerformanceReport />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/daily-distance-report"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <DailyDistanceReport />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/assignment-vehicle-report"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <VehicleAssignmentReport />
             </Suspense>
           }
         />

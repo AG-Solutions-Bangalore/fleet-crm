@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit,
+  Eye,
   Search,
   SquarePlus,
   ToggleLeft,
@@ -395,9 +396,25 @@ const VehicleList = () => {
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => navigate(`/vehicle/vehicle-view/${id}`)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View Vehicle Details</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleEditVehicle(id)}
                   >
-                    <Edit />
+                    <Edit className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

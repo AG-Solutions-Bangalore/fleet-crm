@@ -30,6 +30,7 @@ const EditPenalty = () => {
   const [initialPenalty, setInitialPenalty] = useState({});
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [pendingPenaltyForValue, setPendingPenaltyForValue] = useState("");
 
   const [penalty, setPenalty] = useState({
     penalty_date: "",
@@ -57,15 +58,14 @@ const EditPenalty = () => {
   useEffect(() => {
     if (penaltyData) {
       const d = penaltyData;
-      const formattedDate = d.penalty_date ? d.penalty_date.split(" ")[0] : "";
-      
+
       const cleanedData = {
         id: d.id,
         penalty_date: d.penalty_date || "",
         driver_full_name: d.driver_full_name || "",
         performance_type: d.performance_type || "",
         penalty_type: d.penalty_type || "",
-        penalty_for: d.penalty_for || "",
+        penalty_for: "", // will be set once options load
         penalty_amount: d.penalty_amount || "",
         penalty_details: d.penalty_details || "",
       };
@@ -73,7 +73,9 @@ const EditPenalty = () => {
       // Initialize state only if we have data and haven't initialized for THIS ID yet
       if (id && (!hasInitialized || initialPenalty.id?.toString() !== id.toString())) {
         setPenalty(cleanedData);
-        setInitialPenalty(cleanedData);
+        setInitialPenalty({ ...cleanedData, penalty_for: d.penalty_for || "" });
+        // Store the original penalty_for to apply once options are ready
+        setPendingPenaltyForValue(d.penalty_for || "");
         setHasInitialized(true);
       }
     }
@@ -82,6 +84,7 @@ const EditPenalty = () => {
   // Reset initialization flag when ID changes to allow re-fetching different records
   useEffect(() => {
     setHasInitialized(false);
+    setPendingPenaltyForValue("");
   }, [id]);
 
   useEffect(() => {
@@ -130,6 +133,19 @@ const EditPenalty = () => {
     },
     enabled: !!penalty.penalty_type,
   });
+
+  // Apply penalty_for once the options have finished loading
+  useEffect(() => {
+    if (
+      !isLoadingPenaltyFor &&
+      penaltyForOptions &&
+      penaltyForOptions.length > 0 &&
+      pendingPenaltyForValue
+    ) {
+      setPenalty((prev) => ({ ...prev, penalty_for: pendingPenaltyForValue }));
+      setPendingPenaltyForValue(""); // clear so it doesn't re-apply on re-renders
+    }
+  }, [isLoadingPenaltyFor, penaltyForOptions, pendingPenaltyForValue]);
 
   const onInputChange = (e) => {
     const { name, value } = e.target;
@@ -452,6 +468,7 @@ const EditPenalty = () => {
                     onValueChange={(value) =>
                       onSelectChange("penalty_for", value)
                     }
+                    disabled={isLoadingPenaltyFor || !!pendingPenaltyForValue}
                   >
                     <SelectTrigger id="penalty_for">
                       <div className="flex items-center gap-2">

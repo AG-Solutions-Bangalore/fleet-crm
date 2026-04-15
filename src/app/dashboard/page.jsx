@@ -43,8 +43,8 @@ export default function Page({ children }) {
          
         </header>
 
-        <main className="flex flex-1 flex-col gap-4  pt-0 ">
-          <div className="min-h-[calc(100vh-8rem)] md:min-h-[100vh] flex-1 rounded-xl p-2">
+        <main className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
+          <div className="min-h-[calc(100vh-8rem)] md:min-h-[100vh] flex-1 rounded-xl p-2 overflow-x-hidden">
             {children}
           </div>
         </main>
