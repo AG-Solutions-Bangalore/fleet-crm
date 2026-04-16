@@ -29,35 +29,37 @@ export default function Page({ children }) {
         <AppSidebar />
       </div>
 
-      <SidebarInset>
-        <header className="sticky  top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1 hover:bg-blue-100" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 h-4 inline-block"
-            />
+      <div className="flex w-full max-w-full overflow-hidden">
+        <SidebarInset className="flex-1 min-w-0 max-w-full overflow-hidden">
+          <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1 hover:bg-blue-100" />
+              <Separator
+                orientation="vertical"
+                className="mr-2 h-4 inline-block"
+              />
 
-            <Breadcrumbs onBack={handleBackClick} />
-          </div>
-         
-        </header>
+              <Breadcrumbs onBack={handleBackClick} />
+            </div>
+          </header>
 
-        <main className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
-          <div className="min-h-[calc(100vh-8rem)] md:min-h-[100vh] flex-1 rounded-xl p-2 overflow-x-hidden">
-            {children}
-          </div>
-        </main>
-        <footer className="hidden sm:block sticky bottom-0 z-10  h-8 shrink-0 items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">
-          <div className="flex items-center justify-between gap-2 p-2 text-xs rounded-md border-t-2 border-[var(--color-border)]">
-            <span>© 2025-26 All Rights Reserved</span>
-            <span>updated version : v{Cookies.get('ver_con')}</span>
-            <span>Crafted with ❤️ by AG Solutions</span>
-          </div>
-        </footer>
+          <main className="flex-1 min-w-0 max-w-full flex flex-col gap-4 pt-0 overflow-hidden">
+            <div className="min-w-0 max-w-full min-h-[calc(100vh-8rem)] md:min-h-[100vh] flex-1 rounded-xl p-2 overflow-hidden">
+              {children}
+            </div>
+          </main>
 
-        <ChangePassword setOpen={setOpen} open={open} />
-      </SidebarInset>
+          <footer className="hidden sm:block sticky bottom-0 z-10  h-8 shrink-0 items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">
+            <div className="flex items-center justify-between gap-2 p-2 text-xs rounded-md border-t-2 border-[var(--color-border)]">
+              <span>© 2025-26 All Rights Reserved</span>
+              <span>updated version : v{Cookies.get("ver_con")}</span>
+              <span>Crafted with ❤️ by AG Solutions</span>
+            </div>
+          </footer>
+
+          <ChangePassword setOpen={setOpen} open={open} />
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }

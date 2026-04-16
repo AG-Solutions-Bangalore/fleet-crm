@@ -24,8 +24,8 @@
   "additional_incentive": {
     "slabs": [
       { "min": 90, "max": 93, "value": 200 },
-      { "min": 94, "max": 95, "value": 500 }
-     
+      { "min": 94, "max": 95, "value": 500 },
+      { "min": 95.01, "value": 700 }
     ]
   },
   "columns": {

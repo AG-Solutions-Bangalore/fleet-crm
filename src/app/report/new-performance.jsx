@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import BASE_URL from "@/config/base-url";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { Loader } from "lucide-react";
+import { Download, Loader } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import moment from "moment";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import {
   Table,
   TableBody,
@@ -157,11 +158,12 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                 <th className="border p-2 text-left">Date</th>
                 <th className="border p-2 text-right">Hours Online</th>
                 <th className="border p-2 text-right">Confirmation %</th>
+                <th className="border p-2 text-right">Trips Taken</th>
                 <th className="border p-2 text-right">Daily Earning</th>
                 <th className="border p-2 text-right">Cash Collection</th>
                 <th className="border p-2 text-right">Daily MBG</th>
                 <th className="border p-2 text-right">Cash D</th>
-                <th className="border p-2 text-right">Qr D</th>
+                <th className="border p-2 text-right">QR D</th>
                 <th className="border p-2 text-left">Conditions Met</th>
               </tr>
             </thead>
@@ -171,16 +173,17 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                 const earning = parseFloat(r.total_earings || 0);
                 const hours = parseFloat(r.hours_online || 0);
                 const conf = parseFloat(r.confirmation_rate || 0);
+                const trips = parseInt(r.trips_taken || 0);
                 const cashDepositRow = parseFloat(r.deposit_amount || 0);
-                const qrDepositRow = parseFloat(r.transaction_amount - r.discount_amount || 0);
+                const qrDepositRow = parseFloat(r.transaction_amount || 0) - parseFloat(r.discount_amount || 0);
 
                 // Track which thresholds are met
-                const failedRules = thresholdRules.filter((rule) => {
+                const metRules = thresholdRules.filter((rule) => {
                   const val = parseFloat(r[rule.condition_of] || 0);
-                  return val < parseFloat(rule.condition_amount);
+                  return val >= parseFloat(rule.condition_amount);
                 });
-                const allMet =
-                  thresholdRules.length > 0 && failedRules.length === 0;
+                const anyMet = metRules.length > 0;
+                const allMet = thresholdRules.length > 0 && metRules.length === thresholdRules.length;
 
                 return (
                   <tr
@@ -194,6 +197,7 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                       {hours.toFixed(2)}
                     </td>
                     <td className="border p-2 text-right">{fmtPct(conf)}</td>
+                    <td className="border p-2 text-right">{trips}</td>
                     <td className="border p-2 text-right">{fmt(earning, 2)}</td>
                     <td className="border p-2 text-right">
                       {fmt(parseFloat(r.cash_collected || 0))}
@@ -211,21 +215,23 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                       <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
                         {category}
                       </span>
-                      {allMet ? (
+                      {anyMet ? (
                         <span className="text-green-600 font-medium">
-                          ✓ All Conditions Met
+                          {allMet ? "✓ All Conditions Met" : "✓ Partial MBG Met"}
                         </span>
                       ) : (
                         <span className="text-red-500 text-xs">
-                          {failedRules.map((fr, idx) => (
-                            <span key={idx} className="block">
-                              {fr.condition_of.replace("_", " ")} &lt;{" "}
-                              {fr.condition_amount}
-                            </span>
-                          ))}
-                          {failedRules.length === 0 &&
-                            thresholdRules.length === 0 &&
-                            "Rate Applied"}
+                          {thresholdRules.map((rule, idx) => {
+                            const val = parseFloat(r[rule.condition_of] || 0);
+                            const isMet = val >= parseFloat(rule.condition_amount);
+                            if (isMet) return null;
+                            return (
+                              <span key={idx} className="block">
+                                {rule.condition_of.replace("_", " ")} &lt; {rule.condition_amount}
+                              </span>
+                            );
+                          })}
+                          {thresholdRules.length === 0 && "Rate Applied"}
                         </span>
                       )}
                     </td>
@@ -248,6 +254,9 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                       0,
                     ) / (rows.length || 1),
                   )}
+                </td>
+                <td className="border p-2 text-right">
+                  {rows.reduce((acc, r) => acc + parseInt(r.trips_taken || 0), 0)}
                 </td>
                 <td className="border p-2 text-right">
                   {fmt(
@@ -280,7 +289,7 @@ const MBGDetailModal = ({ driver, onClose, mbgEngine, rules }) => {
                 <td className="border p-2 text-right">
                   {fmt(
                     rows.reduce(
-                      (acc, r) => acc + parseFloat((r.transaction_amount || 0) - (r.discount_amount || 0)),
+                      (acc, r) => acc + (parseFloat(r.transaction_amount || 0) - parseFloat(r.discount_amount || 0)),
                       0,
                     ),
                   )}
@@ -500,11 +509,15 @@ const NewDriverPerformanceReport = () => {
     // 1. Check Threshold Rules (typically >=) for Full MBG
     const thresholdRules = catRules.filter((r) => r.condition_type === ">=");
     if (thresholdRules.length > 0) {
-      const allMet = thresholdRules.every((r) => {
+      const metThresholds = thresholdRules.filter((r) => {
         const val = parseFloat(dayData[r.condition_of] || 0);
         return val >= parseFloat(r.condition_amount);
       });
-      if (allMet) return parseFloat(thresholdRules[0].condition_amount_to_show);
+
+      if (metThresholds.length > 0) {
+        // Return the highest reward amount among met conditions
+        return Math.max(...metThresholds.map((r) => parseFloat(r.condition_amount_to_show)));
+      }
     }
 
     // 2. Fallback to Multiplier/Rate Rules (typically * or <)
@@ -563,9 +576,9 @@ const NewDriverPerformanceReport = () => {
           (acc, r) => acc + parseFloat(r.confirmation_rate || 0),
           0,
         );
-        val = sum / (rows.length || 1);
+        val = (sum / (rows.length || 1)) * 100;
       } else if (metricField === "trips_count") {
-        val = rows.reduce((acc, r) => acc + parseFloat(r.trips_count || 0), 0);
+        val = rows.reduce((acc, r) => acc + parseFloat(r.trips_taken || r.trips_count || 0), 0);
       }
 
       const from = parseFloat(rule.condition_additional_incentive_from || 0);
@@ -616,24 +629,123 @@ const NewDriverPerformanceReport = () => {
     setDates({ fromDate, toDate });
   };
 
+  const exportToExcel = async () => {
+    if (!reportData || reportData.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Performance Report");
+
+      const driverGroups = groupByDriver(reportData);
+      const fleetData = Object.entries(driverGroups).map(([name, rows]) =>
+        computeFleetRow(name, rows, {
+          mbgEngine: calculateDynamicMBG,
+          revenueEngine: evaluateRevenueIncentive,
+          additionalEngine: evaluateAdditionalIncentive,
+          otherEngine: evaluateOtherConditions,
+        })
+      );
+
+      const exportRows = fleetData.map((row) => ({
+        "Driver Name": row.driverName,
+        Category: row.category,
+        MBG: row.mbgTotal,
+        "Acc%": (row.weeklyAcceptance * 100).toFixed(2) + "%",
+        "Tot Earn": row.totalEarnings,
+        "Rev Inc": row.revenueIncentive,
+        "Add Inc": row.additionalIncentive,
+        "Tot Coll": row.totalCashCollection,
+        "Cash Dep": row.cashDeposited,
+        "QR Dep": row.qrDeposited,
+        "Cash Bal": row.cashBalance,
+        "Tot Payout": row.totalPayout,
+        "Payout Adj": row.payoutAfterAdj,
+        Credit: row.credit,
+        Debit: row.debit,
+        "Cust Trips": row.customerTripsTip,
+        "Final Payout": row.finalPayout,
+      }));
+
+      const headers = Object.keys(exportRows[0]);
+      const maxCols = headers.length;
+
+      worksheet.mergeCells(1, 1, 1, maxCols);
+      const titleCell = worksheet.getCell(1, 1);
+      titleCell.value = "New Driver Performance Report";
+      titleCell.font = { bold: true, size: 14 };
+      titleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      worksheet.mergeCells(2, 1, 2, maxCols);
+      const subTitleCell = worksheet.getCell(2, 1);
+      subTitleCell.value = `Range: ${dates.fromDate} to ${dates.toDate}`;
+      subTitleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      const headerRow = worksheet.getRow(4);
+      headerRow.values = headers;
+      headerRow.font = { bold: true };
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF2F2F2" },
+        };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      exportRows.forEach((row) => {
+        const rowData = Object.values(row);
+        const newRow = worksheet.addRow(rowData);
+        newRow.eachCell((cell, colNumber) => {
+          if (colNumber > 2 && colNumber !== 4) {
+            cell.alignment = { horizontal: "right" };
+            cell.numFmt = "#,##0.00";
+          }
+        });
+      });
+
+      worksheet.columns.forEach((col, i) => {
+        if (i === 0) col.width = 25;
+        else col.width = 15;
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `performance-report_${dates.fromDate}.xlsx`);
+      toast.success("Report exported successfully");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export report");
+    }
+  };
+
   const fetchDriverPerformanceReport = async () => {
     if (!dates.fromDate || !dates.toDate) {
       toast.error("Please select both from and to dates");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("from_date", dates.fromDate);
-    formData.append("to_date", dates.toDate);
-
     try {
       setIsLoading(true);
       const response = await axios.post(
         `${BASE_URL}/api/driver-performance-report`,
-        formData,
+        {
+          from_date: dates.fromDate,
+          to_date: dates.toDate,
+        },
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         },
@@ -730,7 +842,7 @@ const NewDriverPerformanceReport = () => {
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col gap-2">
               <Button
                 onClick={fetchDriverPerformanceReport}
                 disabled={isLoading}
@@ -745,6 +857,13 @@ const NewDriverPerformanceReport = () => {
                   "Generate Report"
                 )}
               </Button>
+              
+              {reportData && reportData.length > 0 && (
+                <Button onClick={exportToExcel} variant="outline" className="h-11 w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Excel
+                </Button>
+              )}
             </div>
           </div>
           <div className="mt-2">

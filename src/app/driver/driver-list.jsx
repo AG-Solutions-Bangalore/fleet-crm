@@ -344,7 +344,7 @@ const DriverList = () => {
           </div>
         </div>
       ),
-      size: 150,
+      size: 250,
     },
     {
       id: "aadhar_no",

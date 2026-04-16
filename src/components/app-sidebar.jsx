@@ -3,6 +3,7 @@ import {
   AudioWaveform,
   BarChart3,
   Blocks,
+  Car,
   Command,
   Frame,
   GalleryVerticalEnd,
@@ -48,6 +49,12 @@ const NAVIGATION_CONFIG = {
       title: "Penalty",
       url: "/penalty",
       icon: AlertTriangle,
+      isActive: false,
+    },
+    VEHICLE_ALTERNATE_RIDE: {
+      title: "Vehicle Alternate Ride",
+      url: "/alternate-vehicle-ride",
+      icon: Car,
       isActive: false,
     },
   },
@@ -120,12 +127,32 @@ const NAVIGATION_CONFIG = {
           url: "/performance-new",
         },
         {
+          title: "Driver Performance",
+          url: "/report-drivers-performance",
+        },
+        {
           title: "Daily Distance",
           url: "/daily-distance-report",
         },
         {
           title: "Vehicle Assignment",
           url: "/assignment-vehicle-report",
+        },
+        {
+          title: "Driver Credit",
+          url: "/credit-driver-report",
+        },
+        {
+          title: "Driver Debit",
+          url: "/debit-driver-report",
+        },
+        {
+          title: "Driver Details",
+          url: "/details-driver-report",
+        },
+        {
+          title: "Vehicle Details",
+          url: "/vehicle-details-report",
         },
       ],
     },
@@ -140,12 +167,28 @@ const NAVIGATION_CONFIG = {
 
 const USER_ROLE_PERMISSIONS = {
   1: {
-    navMain: ["DASHBOARD", "MASTER", "UPLOAD", "DEPOSIT", "PENALTY", "REPORT"],
+    navMain: [
+      "DASHBOARD",
+      "MASTER",
+      "UPLOAD",
+      "DEPOSIT",
+      "PENALTY",
+      "VEHICLE_ALTERNATE_RIDE",
+      "REPORT",
+    ],
     navMainReport: ["REPORT", "SETTINGS"],
   },
 
   2: {
-    navMain: ["DASHBOARD", "MASTER", "UPLOAD", "DEPOSIT", "PENALTY", "REPORT"],
+    navMain: [
+      "DASHBOARD",
+      "MASTER",
+      "UPLOAD",
+      "DEPOSIT",
+      "PENALTY",
+      "VEHICLE_ALTERNATE_RIDE",
+      "REPORT",
+    ],
     navMainReport: ["REPORT", "SETTINGS"],
   },
 };

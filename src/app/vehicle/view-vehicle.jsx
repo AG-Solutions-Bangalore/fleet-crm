@@ -13,6 +13,7 @@ import {
   Package,
   Users,
   AlertCircle,
+  Printer,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -56,13 +57,13 @@ const ViewVehicle = () => {
 
   const DisplayField = ({ label, value, icon: Icon }) => (
     <div className="space-y-1">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-widest">
+      <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider doc-field-label">
         {Icon && <Icon className="w-3 h-3" />}
         <span>{label}</span>
       </div>
-      <div className="p-2.5 bg-gray-50/80 border border-gray-100 rounded-lg text-sm font-semibold min-h-[2.5rem] flex items-center shadow-sm">
+      <div className="text-sm font-semibold text-gray-900 break-all doc-field-value min-h-[1.5rem] flex items-center border-b border-gray-50 pb-0.5">
         {value || (
-          <span className="text-muted-foreground/50 font-normal italic">
+          <span className="text-muted-foreground/50 font-normal italic text-xs">
             N/A
           </span>
         )}
@@ -124,31 +125,48 @@ const ViewVehicle = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-4 p-4 md:p-4 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-6xl mx-auto print:mx-0 space-y-4 p-2 md:p-4 animate-in fade-in duration-500 printable-document bg-white">
+      {/* Report Header (Visible on Screen & Print) */}
+      <div className="text-center border-b-2 border-[var(--team-color)] pb-4 mb-6 print:mb-2 print:pb-2">
+        <h1 className="text-2xl font-black uppercase tracking-widest text-gray-900">
+          Vehicle Information
+        </h1>
+      </div>
+
+      <div className="flex items-center justify-between no-print mb-2">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           Vehicle Profile
         </h1>
-        <Button
-          onClick={() => navigate("/vehicle")}
-          variant="outline"
-          size="sm"
-          className="font-bold"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => window.print()}
+            variant="default"
+            size="sm"
+            className="font-bold bg-gray-900 text-white hover:bg-gray-800"
+          >
+            <Printer className="w-4 h-4 mr-1" /> Print
+          </Button>
+          <Button
+            onClick={() => navigate("/vehicle")}
+            variant="outline"
+            size="sm"
+            className="font-bold"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+        </div>
       </div>
 
       {/* Card 1: Vehicle Overview */}
-      <Card className="shadow-lg border-none ring-1 ring-gray-200 overflow-hidden">
+      <Card className="shadow-none border-none print:shadow-none print:ring-0">
         <CardHeader className="p-0">
           <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-4 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white border shadow-sm flex items-center justify-center">
-                <Car className="w-7 h-7 text-primary" />
+              <div className="w-14 h-14 rounded-2xl bg-white border shadow-sm flex items-center justify-center print:border-gray-300">
+                <Car className="w-7 h-7 text-gray-900" />
               </div>
               <div className="space-y-1">
-                <div className="flex items-center gap-3 font-black text-2xl tracking-tight uppercase">
+                <div className="flex flex-col items-start font-black text-2xl tracking-tight uppercase">
                   {vehicle.vehicle_number_plate}
                   <Badge
                     className={`font-bold ${
@@ -160,27 +178,17 @@ const ViewVehicle = () => {
                     {vehicle.vehicle_status}
                   </Badge>
                 </div>
-                <div className="text-xs text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded border">
-                  UUID: {vehicle.vehicle_uuid}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col md:items-end gap-1">
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                Entry Metadata
-              </span>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-[10px] font-bold">
-                  Created: {moment(vehicle.created_at).format("DD MMM YYYY")}
-                </Badge>
               </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-6 md:p-6 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <CardContent className="p-6 md:p-6 space-y-8 print:p-0 pt-2">
+          <div className="flex items-center p-2.5 gap-2 text-sm rounded-lg font-bold bg-[var(--team-color)] text-white uppercase tracking-widest doc-section-header">
+            <Car className="w-4 h-4" />
+            Vehicle Details
+          </div>
+          <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <DisplayField
               label="Number Plate"
               value={vehicle.vehicle_number_plate}
@@ -220,10 +228,10 @@ const ViewVehicle = () => {
       </Card>
 
       {/* Card 2: Assignment History */}
-      <Card className="shadow-lg border-none ring-1 ring-gray-200 overflow-hidden p-4">
-        <CardHeader className="bg-muted/30 border-b">
+      <Card className="shadow-none border-none print:shadow-none print:ring-0 p-0 mt-6 border-t border-gray-100 pt-6">
+        <CardHeader className="doc-section-header bg-[var(--team-color)] text-white rounded-lg mb-4">
           <CardTitle className="text-lg font-bold flex items-center gap-2 uppercase tracking-tight">
-            <Users className="w-5 h-5 text-primary" />
+            <Users className="w-5 h-5 text-white" />
             Driver Assignment History
           </CardTitle>
         </CardHeader>
@@ -276,17 +284,19 @@ const ViewVehicle = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-center font-semibold text-xs text-gray-700">
-                        {sub.vehicles_sub_start_date
-                          ? moment(sub.vehicles_sub_start_date).format(
-                              "DD MMM YYYY",
-                            )
-                          : "N/A"}
+                        {(() => {
+                          const date = sub.vehicles_sub_start_date;
+                          if (!date || date === "0000-00-00") return "N/A";
+                          const m = moment(date);
+                          return m.isValid() ? m.format("DD MMM YYYY") : "N/A";
+                        })()}
                         <span className="mx-2 text-muted-foreground/50">→</span>
-                        {sub.vehicles_sub_end_date
-                          ? moment(sub.vehicles_sub_end_date).format(
-                              "DD MMM YYYY",
-                            )
-                          : "Active Assignment"}
+                        {(() => {
+                          const date = sub.vehicles_sub_end_date;
+                          if (!date || date === "0000-00-00") return "Active Assignment";
+                          const m = moment(date);
+                          return m.isValid() ? m.format("DD MMM YYYY") : "Active Assignment";
+                        })()}
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge
