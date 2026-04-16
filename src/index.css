@@ -1,5 +1,3 @@
-
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -384,4 +382,89 @@
 
 .login-blob-3 {
   background-color: var(--login-blob-3);
+}
+
+@media print {
+  /* Hiding all non-essential UI elements */
+  [data-sidebar],
+  .app-sidebar,
+  aside,
+  nav,
+  header,
+  .sticky,
+  footer,
+  .no-print,
+  .no-print *,
+  button,
+  .sidebar-trigger,
+  .breadcrumb-nav,
+  .breadcrumbs,
+  [aria-label="breadcrumb"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Resetting page layout for print */
+  body, html {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Force the main container to take full width */
+  .sidebar-inset,
+  main,
+  div[role="main"],
+  #root > div {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    display: block !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  /* Optimize the document container for A4 printing */
+  .printable-document {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+  }
+
+  /* Preserve colors/backgrounds for headers */
+  .doc-section-header {
+    background-color: var(--team-color) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color: white !important;
+  }
+
+  /* Field dividers */
+  .doc-field-value {
+    border-bottom: 1px solid #eee !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page break management */
+  .page-break {
+    page-break-before: always !important;
+  }
+}
+
+@page {
+  size: auto;
+  margin: 10mm 15mm;
 }

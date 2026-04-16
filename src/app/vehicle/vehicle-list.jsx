@@ -332,6 +332,25 @@ const VehicleList = () => {
       size: 200,
     },
     {
+      accessorKey: "merchant_id",
+      id: "Merchant ID",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="px-2 h-8 text-xs"
+        >
+          Merchant ID
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div className="text-xs">{row.getValue("Merchant ID")}</div>
+      ),
+      size: 100,
+    },
+    {
       accessorKey: "vehicle_status",
       id: "Status",
       header: ({ column }) => (

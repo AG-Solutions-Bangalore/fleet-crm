@@ -15,7 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const NA = () => <span className="text-muted-foreground text-xs">N/A</span>;
 
@@ -83,49 +84,108 @@ const VehicleAssignmentReport = () => {
       })
     : [];
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!filteredData || filteredData.length === 0) {
       toast.error("No data to export");
       return;
     }
 
-    const exportRows = filteredData.map((row, index) => ({
-      "S.No": index + 1,
-      "Vehicle Number": row.vehicle_number_plate,
-      Variant: row.vehicle_variant ?? "N/A",
-      "Product Type": row.vehicle_product_type ?? "N/A",
-      Status: row.vehicle_status,
-      DOJ: row.doj ?? "N/A",
-      "Driver Name": row.driver_fullname ?? "N/A",
-      Mobile: row.mobile ?? "N/A",
-      "Alternate Mobile": row.alternate_mobile_no ?? "N/A",
-      "DL Submitted": row.dl_submitted ?? "N/A",
-      "PCC Status": row.pcc_status ?? "N/A",
-      Umbrella: row.vehicle_umbrella ?? "N/A",
-      "Tissue Box": row.vehicle_tissue_box ?? "N/A",
-      "Refer By": row.referby ?? "N/A",
-      "Refer By Mobile": row.referby_mobile ?? "N/A",
-    }));
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Vehicle Assignment");
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Assignment");
-    XLSX.writeFile(workbook, `vehicle-assignment-report_${fromDate}.xlsx`);
-    toast.success("Report exported successfully");
+      const exportRows = filteredData.map((row, index) => ({
+        "S.No": index + 1,
+        "Vehicle Number": row.vehicle_number_plate,
+        Variant: row.vehicle_variant ?? "N/A",
+        "Product Type": row.vehicle_product_type ?? "N/A",
+        Status: row.vehicle_status,
+        DOJ: row.doj ?? "N/A",
+        "Driver Name": row.driver_fullname ?? "N/A",
+        Mobile: row.mobile ?? "N/A",
+        "Alternate Mobile": row.alternate_mobile_no ?? "N/A",
+        "DL Submitted": row.dl_submitted ?? "N/A",
+        "PCC Status": row.pcc_status ?? "N/A",
+        Umbrella: row.vehicle_umbrella ?? "N/A",
+        "Tissue Box": row.vehicle_tissue_box ?? "N/A",
+        "Refer By": row.referby ?? "N/A",
+        "Refer By Mobile": row.referby_mobile ?? "N/A",
+      }));
+
+      const headers = Object.keys(exportRows[0]);
+      const maxCols = headers.length;
+
+      // 1. Add Title
+      worksheet.mergeCells(1, 1, 1, maxCols);
+      const titleCell = worksheet.getCell(1, 1);
+      titleCell.value = "Vehicle Assignment Report";
+      titleCell.font = { bold: true, size: 14 };
+      titleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      // 2. Add Generation Date
+      worksheet.mergeCells(2, 1, 2, maxCols);
+      const subTitleCell = worksheet.getCell(2, 1);
+      subTitleCell.value = `Date: ${fromDate}`;
+      subTitleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      // 3. Header Row (Row 4)
+      const headerRow = worksheet.getRow(4);
+      headerRow.values = headers;
+      headerRow.font = { bold: true };
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF2F2F2" },
+        };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      // 4. Add Data Rows
+      exportRows.forEach((row) => {
+        const rowData = Object.values(row);
+        const newRow = worksheet.addRow(rowData);
+        newRow.eachCell((cell) => {
+          cell.alignment = { vertical: "middle" };
+        });
+      });
+
+      // 5. Adjust Column Widths
+      worksheet.columns.forEach((col, i) => {
+        if (i === 0) col.width = 8;
+        else col.width = 20;
+      });
+
+      // Generate and Save
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `vehicle-assignment-report_${fromDate}.xlsx`);
+      toast.success("Report exported successfully");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export report");
+    }
   };
 
   const cell = (val) => (fmt(val) !== null ? val : <NA />);
 
   return (
-    <div className="w-full flex justify-center py-6 pb-20 overflow-x-hidden">
-      <div className="w-full max-w-[1250px]">
-        <Card className="w-full">
+    <div className="w-full min-w-0 py-6 pb-20 overflow-x-hidden">
+      <div className="w-full min-w-0">
+        <Card className="w-full min-w-0">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-semibold">
               Vehicle Assignment Report
             </CardTitle>
           </CardHeader>
-
           <CardContent className="space-y-6">
             {/* Filters */}
             <div className="flex flex-wrap gap-4 items-end">
@@ -177,9 +237,7 @@ const VehicleAssignmentReport = () => {
                 <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : reportData === null ? (
-              <p className="text-center text-muted-foreground py-6">
-                Select a date and click "Generate Report"
-              </p>
+              <p></p>
             ) : reportData.length === 0 ? (
               <p className="text-center text-muted-foreground py-6">
                 No data available
@@ -187,9 +245,9 @@ const VehicleAssignmentReport = () => {
             ) : (
               <div className="w-full border rounded-lg">
                 {/* ONLY THIS SCROLLS */}
-                <div className="overflow-x-auto">
-                  <div className="min-w-[1800px]">
-                    <Table>
+                <div className="w-full border rounded-lg">
+                  <div className="w-full overflow-x-auto">
+                    <Table className="min-w-[1800px]">
                       <TableHeader>
                         <TableRow className="bg-muted/50">
                           <TableHead>S.No</TableHead>
@@ -232,7 +290,9 @@ const VehicleAssignmentReport = () => {
                               </TableCell>
                               <TableCell>{cell(row.dl_submitted)}</TableCell>
                               <TableCell>{cell(row.pcc_status)}</TableCell>
-                              <TableCell>{cell(row.vehicle_umbrella)}</TableCell>
+                              <TableCell>
+                                {cell(row.vehicle_umbrella)}
+                              </TableCell>
                               <TableCell>
                                 {cell(row.vehicle_tissue_box)}
                               </TableCell>

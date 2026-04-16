@@ -173,7 +173,7 @@ const Home = () => {
       value: dashboardData?.data?.pendingDriverQR || 0,
       icon: ClipboardCheck,
       color: "bg-amber-500",
-      link: "/qr-drivers",
+      link: "/vehicle",
     },
   ];
 
@@ -184,6 +184,33 @@ const Home = () => {
       (acc, curr) => acc + parseFloat(curr.totalPenalty || 0),
       0,
     );
+  }, [dashboardData]);
+
+  // Grouped penalty for granular display
+  const groupedPenalties = useMemo(() => {
+    const rawPenalties = dashboardData?.data?.totalDriverPenalty || [];
+    const groups = {};
+
+    rawPenalties.forEach((item) => {
+      const type = item.performance_type;
+      if (!groups[type]) {
+        groups[type] = {
+          performance_type: type,
+          credit: 0,
+          debit: 0,
+          total: 0,
+        };
+      }
+      const amt = parseFloat(item.totalPenalty || 0);
+      if (item.penalty_type === "Credit") {
+        groups[type].credit += amt;
+      } else if (item.penalty_type === "Debit") {
+        groups[type].debit += amt;
+      }
+      groups[type].total += amt;
+    });
+
+    return Object.values(groups);
   }, [dashboardData]);
 
   const totalDeposit = useMemo(() => {
@@ -437,21 +464,45 @@ const Home = () => {
                 ? Array.from({ length: 2 }).map((_, i) => (
                     <Skeleton key={i} className="h-10 w-full" />
                   ))
-                : dashboardData?.data?.totalDriverPenalty?.map((item, i) => (
+                : groupedPenalties.map((group, i) => (
                     <div
                       key={i}
                       className="flex items-center justify-between p-3 rounded-xl border border-slate-50 hover:border-rose-100 hover:bg-rose-50/20 transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getTypeColor(item.performance_type)}`}
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getTypeColor(group.performance_type)}`}
                         >
-                          {item.performance_type}
+                          {group.performance_type}
                         </div>
                       </div>
-                      <span className="font-bold text-slate-700">
-                        ₹{parseFloat(item.totalPenalty).toLocaleString()}
-                      </span>
+                      <div className="flex gap-4">
+                        {group.credit > 0 && (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                              Credit
+                            </span>
+                            <span className="font-bold text-emerald-600 text-sm">
+                              ₹{group.credit.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {group.debit > 0 && (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                              Debit
+                            </span>
+                            <span className="font-bold text-rose-600 text-sm">
+                              ₹{group.debit.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {group.credit === 0 && group.debit === 0 && (
+                          <span className="font-bold text-slate-700">
+                            ₹{group.total.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
             </div>
