@@ -389,6 +389,9 @@ const FleetReportView = ({
               >
                 Driver Name
               </th>
+              <th className={colHeaderClass} title="Opening Balance">
+                Opening
+              </th>
               <th
                 className={`${colHeaderClass} bg-green-700`}
                 title="Sum of MBG — click driver row to expand"
@@ -442,6 +445,12 @@ const FleetReportView = ({
               <th className={`${colHeaderClass} bg-yellow-500 text-black`}>
                 Final Payout
               </th>
+              <th className={colHeaderClass} title="Paid Amount">
+                Paid
+              </th>
+              <th className={`${colHeaderClass} bg-yellow-500 text-black`}>
+                Closing
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -457,6 +466,7 @@ const FleetReportView = ({
                   <td className={`${nameCellClass} ${rowBg}`}>
                     {row.driver_full_name}
                   </td>
+                  <td className={cellClass}>{row.opening_balance}</td>
                   <td
                     className={`${cellClass} text-green-700 font-bold cursor-pointer hover:underline`}
                     onClick={() => setSelectedDriver(row)}
@@ -494,6 +504,16 @@ const FleetReportView = ({
                   >
                     {row.finalPayout}
                   </td>
+                  <td className={cellClass}>{row.driver_payment}</td>
+                  <td
+                    className={`${cellClass} font-bold text-sm ${
+                      row.closing_balance >= 0
+                        ? "text-green-700 bg-green-50"
+                        : "text-red-700 bg-red-50"
+                    }`}
+                  >
+                    {row.closing_balance}
+                  </td>
                 </tr>
               );
             })}
@@ -504,7 +524,7 @@ const FleetReportView = ({
   );
 };
 
-const DriverPerformanceReport = () => {
+const FinalDriverPerformanceReport = () => {
   const [reportData, setReportData] = useState(null);
   const [popupData, setPopupData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -558,7 +578,7 @@ const DriverPerformanceReport = () => {
     }
   };
 
-  const syncDriverPerformanceReport = async () => {
+  const deleteSyncDriverPerformanceReport = async () => {
     if (!dates.fromDate || !dates.toDate) {
       toast.error("Please select both from and to dates");
       return;
@@ -567,7 +587,7 @@ const DriverPerformanceReport = () => {
     try {
       setIsSyncing(true);
       const response = await axios.post(
-        `${BASE_URL}/api/driver-performance-data-sync`,
+        `${BASE_URL}/api/delete-driver-performance-data-sync`,
         {
           from_date: dates.fromDate,
           to_date: dates.toDate,
@@ -583,17 +603,18 @@ const DriverPerformanceReport = () => {
       if (response?.data?.code === 201) {
         toast.success(
           response?.data?.message ||
-            "Driver Performance Data Synced successfully",
+            "Driver Performance Data Deleted successfully",
         );
+        fetchDriverPerformanceReport();
       } else {
         toast.error(
-          response?.data?.message || "Failed to sync Driver Performance Data",
+          response?.data?.message || "Failed to delete Driver Performance Data",
         );
       }
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          "Failed to sync Driver Performance Data",
+          "Failed to delete Driver Performance Data",
       );
     } finally {
       setIsSyncing(false);
@@ -608,7 +629,7 @@ const DriverPerformanceReport = () => {
     try {
       setIsLoading(true);
       const response = await axios.post(
-        `${BASE_URL}/api/driver-performance-report-new`,
+        `${BASE_URL}/api/driver-performance-report-after-sync`,
         {
           from_date: dates.fromDate,
           to_date: dates.toDate,
@@ -640,7 +661,7 @@ const DriverPerformanceReport = () => {
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="w-full mx-auto py-6">
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Driver Performance Report</CardTitle>
@@ -726,7 +747,7 @@ const DriverPerformanceReport = () => {
                 <Button
                   onClick={() => setIsSyncConfirmOpen(true)}
                   disabled={isSyncing}
-                  className="h-11 w-full bg-green-700 hover:bg-green-800"
+                  className="h-11 w-full bg-red-700 hover:bg-red-800"
                 >
                   {isSyncing ? (
                     <>
@@ -734,7 +755,7 @@ const DriverPerformanceReport = () => {
                       Syncing...
                     </>
                   ) : (
-                    "Sync Data"
+                    "Delete Synced Data"
                   )}
                 </Button>
 
@@ -744,13 +765,13 @@ const DriverPerformanceReport = () => {
                 >
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle className="text-orange-600 flex items-center">
+                      <AlertDialogTitle className="text-red-600 flex items-center">
                         <AlertTriangle className="mr-2 h-5 w-5" />
-                        Confirm Data Sync
+                        Delete Synced Data
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to sync the driver performance
-                        data for the period from{" "}
+                        Are you sure you want to delete the synced driver
+                        performance data for the period from{" "}
                         <span className="font-bold text-black">
                           {moment(dates.fromDate).format("DD-MM-YYYY")}
                         </span>{" "}
@@ -766,12 +787,12 @@ const DriverPerformanceReport = () => {
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => {
-                          syncDriverPerformanceReport();
+                          deleteSyncDriverPerformanceReport();
                           setIsSyncConfirmOpen(false);
                         }}
-                        className="bg-green-700 hover:bg-green-800"
+                        className="bg-red-700 hover:bg-red-800"
                       >
-                        Confirm Sync
+                        Confirm Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -805,4 +826,4 @@ const DriverPerformanceReport = () => {
   );
 };
 
-export default DriverPerformanceReport;
+export default FinalDriverPerformanceReport;

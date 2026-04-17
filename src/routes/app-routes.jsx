@@ -39,6 +39,10 @@ import DriverCreditReport from "@/app/report/driver-credit";
 import DriverDetailsReport from "@/app/report/driver-details";
 import VehicleDetailsReport from "@/app/report/vehicle-details";
 import DriverPerfromanceReport from "@/app/report/driver-performance";
+import FinalDriverPerformanceReport from "@/app/report/final-performance";
+import CreateDriverPayment from "@/app/driver-payment/create-payment";
+import EditDriverPayment from "@/app/driver-payment/edit-payment";
+import DriverPaymentList from "@/app/driver-payment/payment-list";
 const Login = lazy(() => import("@/app/auth/login"));
 
 const NotFound = lazy(() => import("@/app/errors/not-found"));
@@ -259,6 +263,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/final-performance-report"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <FinalDriverPerformanceReport />
+            </Suspense>
+          }
+        />
+        <Route
           path="/daily-distance-report"
           element={
             <Suspense fallback={<LoadingBar />}>
@@ -329,6 +341,32 @@ function AppRoutes() {
           element={
             <Suspense fallback={<LoadingBar />}>
               <EditDeposit />
+            </Suspense>
+          }
+        />
+
+        {/* driver payment  */}
+        <Route
+          path="/paid-driver"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <DriverPaymentList />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/paid-driver/create-payment"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <CreateDriverPayment />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/paid-driver/payment-edit/:id"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <EditDriverPayment />
             </Suspense>
           }
         />

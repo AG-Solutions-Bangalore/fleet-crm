@@ -57,6 +57,12 @@ const NAVIGATION_CONFIG = {
       icon: Car,
       isActive: false,
     },
+    DRIVER_PAYMENT: {
+      title: "Driver Payment",
+      url: "/paid-driver",
+      icon: Wallet,
+      isActive: false,
+    },
   },
 
   MODULES: {
@@ -122,13 +128,17 @@ const NAVIGATION_CONFIG = {
       isActive: false,
       icon: BarChart3,
       items: [
-        {
-          title: "Performance New",
-          url: "/performance-new",
-        },
+        // {
+        //   title: "Performance New",
+        //   url: "/performance-new",
+        // },
         {
           title: "Driver Performance",
           url: "/report-drivers-performance",
+        },
+        {
+          title: "Final Performance",
+          url: "/final-performance-report",
         },
         {
           title: "Daily Distance",
@@ -174,6 +184,7 @@ const USER_ROLE_PERMISSIONS = {
       "DEPOSIT",
       "PENALTY",
       "VEHICLE_ALTERNATE_RIDE",
+      "DRIVER_PAYMENT",
       "REPORT",
     ],
     navMainReport: ["REPORT", "SETTINGS"],
@@ -187,6 +198,7 @@ const USER_ROLE_PERMISSIONS = {
       "DEPOSIT",
       "PENALTY",
       "VEHICLE_ALTERNATE_RIDE",
+      "DRIVER_PAYMENT",
       "REPORT",
     ],
     navMainReport: ["REPORT", "SETTINGS"],
