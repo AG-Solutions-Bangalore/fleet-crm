@@ -14,7 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,13 +43,19 @@ import {
 } from "@tanstack/react-table";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import moment from "moment";
 import CreateDriver from "../driver/create-driver";
 import CreateDriverPerformance from "./create-driver-performance";
-
 
 const DriverPerformanceList = () => {
   const queryClient = useQueryClient();
@@ -63,9 +74,13 @@ const DriverPerformanceList = () => {
   const [pageInput, setPageInput] = useState("");
 
   const storeCurrentPage = () => {
-    Cookies.set("driverPerformanceReturnPage", (pagination.pageIndex + 1).toString(), {
-      expires: 1
-    });
+    Cookies.set(
+      "driverPerformanceReturnPage",
+      (pagination.pageIndex + 1).toString(),
+      {
+        expires: 1,
+      },
+    );
   };
 
   // Delete mutation
@@ -80,20 +95,26 @@ const DriverPerformanceList = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       return response.data;
     },
     onSuccess: (data) => {
       toast.success(data.message || "Driver performance deleted successfully");
       queryClient.invalidateQueries({
-        queryKey: ["driver-performance", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: [
+          "driver-performance",
+          debouncedSearchTerm,
+          pagination.pageIndex + 1,
+        ],
       });
       setDeleteDialogOpen(false);
       setSelectedPerformance(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || "Failed to delete driver performance");
+      toast.error(
+        error.response?.data?.message || "Failed to delete driver performance",
+      );
       setDeleteDialogOpen(false);
       setSelectedPerformance(null);
     },
@@ -118,7 +139,7 @@ const DriverPerformanceList = () => {
       setTimeout(() => {
         const pageIndex = parseInt(savedPage) - 1;
         if (pageIndex >= 0) {
-          setPagination(prev => ({ ...prev, pageIndex }));
+          setPagination((prev) => ({ ...prev, pageIndex }));
           setPageInput(savedPage);
 
           queryClient.invalidateQueries({
@@ -132,10 +153,11 @@ const DriverPerformanceList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
+      const isNewSearch =
+        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
 
       if (isNewSearch) {
-        setPagination(prev => ({ ...prev, pageIndex: 0 }));
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
       }
 
       setDebouncedSearchTerm(searchTerm);
@@ -148,13 +170,17 @@ const DriverPerformanceList = () => {
   }, [searchTerm, previousSearchTerm]);
 
   const {
-    data: performancesData,
+    data: responseData,
     isLoading,
     isError,
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["driver-performance", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: [
+      "driver-performance",
+      debouncedSearchTerm,
+      pagination.pageIndex + 1,
+    ],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
@@ -170,15 +196,18 @@ const DriverPerformanceList = () => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-        }
+        },
       );
-      return response.data.data;
+      return response.data;
     },
     keepPreviousData: true,
     staleTime: 5 * 60 * 1000,
   });
+
+  const performancesData = responseData?.data;
+  const lastPerformanceList = responseData?.lastPerformance || [];
 
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
@@ -203,11 +232,11 @@ const DriverPerformanceList = () => {
             {
               headers: {
                 Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
               },
-            }
+            },
           );
-          return response.data.data;
+          return response.data;
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -216,7 +245,13 @@ const DriverPerformanceList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["driver-performance", debouncedSearchTerm, prevPage])) {
+      if (
+        !queryClient.getQueryData([
+          "driver-performance",
+          debouncedSearchTerm,
+          prevPage,
+        ])
+      ) {
         queryClient.prefetchQuery({
           queryKey: ["driver-performance", debouncedSearchTerm, prevPage],
           queryFn: async () => {
@@ -234,17 +269,22 @@ const DriverPerformanceList = () => {
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
                 },
-              }
+              },
             );
-            return response.data.data;
+            return response.data;
           },
           staleTime: 5 * 60 * 1000,
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, performancesData?.last_page]);
+  }, [
+    pagination.pageIndex,
+    debouncedSearchTerm,
+    queryClient,
+    performancesData?.last_page,
+  ]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -259,7 +299,8 @@ const DriverPerformanceList = () => {
       id: "S. No.",
       header: "S. No.",
       cell: ({ row }) => {
-        const globalIndex = (pagination.pageIndex * pagination.pageSize) + row.index + 1;
+        const globalIndex =
+          pagination.pageIndex * pagination.pageSize + row.index + 1;
         return <div className="text-xs font-medium">{globalIndex}</div>;
       },
       size: 70,
@@ -278,7 +319,11 @@ const DriverPerformanceList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-[13px] font-medium">{row.getValue("Driver Name")}</div>,
+      cell: ({ row }) => (
+        <div className="text-[13px] font-medium">
+          {row.getValue("Driver Name")}
+        </div>
+      ),
     },
     {
       accessorKey: "driver_email",
@@ -294,7 +339,9 @@ const DriverPerformanceList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-xs">{row.getValue("Driver Email")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs">{row.getValue("Driver Email")}</div>
+      ),
       // size: 200,
     },
     {
@@ -311,7 +358,9 @@ const DriverPerformanceList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-xs">{row.getValue("Driver Mobile")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs">{row.getValue("Driver Mobile")}</div>
+      ),
       // size: 120,
     },
     {
@@ -368,7 +417,9 @@ const DriverPerformanceList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-xs font-medium">{row.getValue("Trips Taken")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs font-medium">{row.getValue("Trips Taken")}</div>
+      ),
       // size: 80,
     },
     {
@@ -425,7 +476,9 @@ const DriverPerformanceList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-xs">{row.getValue("Performance Type")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs">{row.getValue("Performance Type")}</div>
+      ),
       // size: 120,
     },
     {
@@ -442,7 +495,11 @@ const DriverPerformanceList = () => {
           <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => <div className="text-xs">{moment(row.getValue("Performance Date")).format("DD-MM-YYYY")}</div>,
+      cell: ({ row }) => (
+        <div className="text-xs">
+          {moment(row.getValue("Performance Date")).format("DD-MM-YYYY")}
+        </div>
+      ),
       // size: 100,
     },
     // {
@@ -522,10 +579,14 @@ const DriverPerformanceList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["driver-performance", debouncedSearchTerm, targetPage]);
+    const cachedData = queryClient.getQueryData([
+      "driver-performance",
+      debouncedSearchTerm,
+      targetPage,
+    ]);
 
     if (cachedData) {
-      setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));
+      setPagination((prev) => ({ ...prev, pageIndex: newPageIndex }));
     } else {
       table.setPageIndex(newPageIndex);
     }
@@ -557,14 +618,22 @@ const DriverPerformanceList = () => {
         className="h-8 w-8 p-0 text-xs"
       >
         1
-      </Button>
+      </Button>,
     );
 
     if (currentPage > 3) {
-      buttons.push(<span key="ellipsis1" className="px-2">...</span>);
+      buttons.push(
+        <span key="ellipsis1" className="px-2">
+          ...
+        </span>,
+      );
     }
 
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+    for (
+      let i = Math.max(2, currentPage - 1);
+      i <= Math.min(totalPages - 1, currentPage + 1);
+      i++
+    ) {
       if (i !== 1 && i !== totalPages) {
         buttons.push(
           <Button
@@ -575,13 +644,17 @@ const DriverPerformanceList = () => {
             className="h-8 w-8 p-0 text-xs"
           >
             {i}
-          </Button>
+          </Button>,
         );
       }
     }
 
     if (currentPage < totalPages - 2) {
-      buttons.push(<span key="ellipsis2" className="px-2">...</span>);
+      buttons.push(
+        <span key="ellipsis2" className="px-2">
+          ...
+        </span>,
+      );
     }
 
     if (totalPages > 1) {
@@ -594,7 +667,7 @@ const DriverPerformanceList = () => {
           className="h-8 w-8 p-0 text-xs"
         >
           {totalPages}
-        </Button>
+        </Button>,
       );
     }
 
@@ -638,15 +711,34 @@ const DriverPerformanceList = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this driver performance record.
+              This action cannot be undone. This will permanently delete this
+              driver performance record.
               {selectedPerformance && (
                 <div className="mt-2 p-3 bg-muted rounded-md">
-                  <p><span className="font-medium">Driver:</span> {selectedPerformance.driver_full_name}</p>
-                  <p><span className="font-medium">Type:</span> {selectedPerformance.performance_type}</p>
-                  <p><span className="font-medium">Cash Collected:</span> {selectedPerformance.cash_collected}</p>
-                  <p><span className="font-medium">Trips:</span> {selectedPerformance.trips_taken}</p>
-                  <p><span className="font-medium">Confirmation: </span> {selectedPerformance.confirmation_rate * 100}%</p>
-                  <p><span className="font-medium">Cancelletion: </span> {selectedPerformance.cancellation_rate * 100}%</p>
+                  <p>
+                    <span className="font-medium">Driver:</span>{" "}
+                    {selectedPerformance.driver_full_name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Type:</span>{" "}
+                    {selectedPerformance.performance_type}
+                  </p>
+                  <p>
+                    <span className="font-medium">Cash Collected:</span>{" "}
+                    {selectedPerformance.cash_collected}
+                  </p>
+                  <p>
+                    <span className="font-medium">Trips:</span>{" "}
+                    {selectedPerformance.trips_taken}
+                  </p>
+                  <p>
+                    <span className="font-medium">Confirmation: </span>{" "}
+                    {selectedPerformance.confirmation_rate * 100}%
+                  </p>
+                  <p>
+                    <span className="font-medium">Cancelletion: </span>{" "}
+                    {selectedPerformance.cancellation_rate * 100}%
+                  </p>
                 </div>
               )}
             </AlertDialogDescription>
@@ -671,7 +763,7 @@ const DriverPerformanceList = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex items-center justify-between py-1">
+      <div className="flex items-center justify-between py-1 gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
@@ -685,6 +777,26 @@ const DriverPerformanceList = () => {
             }}
             className="pl-8 h-9 text-sm bg-gray-50 border-gray-200 focus:border-gray-300 focus:ring-gray-200"
           />
+        </div>
+
+        <div className="hidden lg:flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[50%]">
+          {lastPerformanceList.map((item, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 px-3 py-1 bg-blue-50/50 border border-blue-100 rounded-full shadow-sm flex-shrink-0"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider whitespace-nowrap">
+                  Last: {item.performance_type}
+                </span>
+              </div>
+              <div className="h-4 w-[1px] bg-blue-200" />
+              <span className="text-[11px] text-blue-900 font-semibold whitespace-nowrap">
+                {moment(item.last_performance_date).format("DD-MM-YYYY")}
+              </span>
+            </div>
+          ))}
         </div>
         <div className="flex flex-col md:flex-row md:ml-auto gap-2 w-full md:w-auto">
           <DropdownMenu>
@@ -702,7 +814,9 @@ const DriverPerformanceList = () => {
                     key={column.id}
                     className="text-xs capitalize"
                     checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
@@ -727,9 +841,9 @@ const DriverPerformanceList = () => {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -750,7 +864,7 @@ const DriverPerformanceList = () => {
                     <TableCell key={cell.id} className="px-3 py-1">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -758,7 +872,10 @@ const DriverPerformanceList = () => {
               ))
             ) : (
               <TableRow className="h-12">
-                <TableCell colSpan={columns.length} className="h-24 text-center text-sm">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-sm"
+                >
                   No driver performance records found.
                 </TableCell>
               </TableRow>
@@ -769,8 +886,8 @@ const DriverPerformanceList = () => {
 
       <div className="flex items-center justify-between py-1">
         <div className="text-sm text-muted-foreground">
-          Showing {performancesData?.from || 0} to {performancesData?.to || 0} of{" "}
-          {performancesData?.total || 0} records
+          Showing {performancesData?.from || 0} to {performancesData?.to || 0}{" "}
+          of {performancesData?.total || 0} records
         </div>
 
         <div className="flex items-center space-x-2">
@@ -820,7 +937,3 @@ const DriverPerformanceList = () => {
 };
 
 export default DriverPerformanceList;
-
-
-
-

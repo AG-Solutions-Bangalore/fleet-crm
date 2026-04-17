@@ -71,7 +71,10 @@ const EditPenalty = () => {
       };
 
       // Initialize state only if we have data and haven't initialized for THIS ID yet
-      if (id && (!hasInitialized || initialPenalty.id?.toString() !== id.toString())) {
+      if (
+        id &&
+        (!hasInitialized || initialPenalty.id?.toString() !== id.toString())
+      ) {
         setPenalty(cleanedData);
         setInitialPenalty({ ...cleanedData, penalty_for: d.penalty_for || "" });
         // Store the original penalty_for to apply once options are ready
@@ -101,8 +104,9 @@ const EditPenalty = () => {
       });
       const data = response.data.data || [];
       // Deduplicate by name just in case API returns duplicates
-      const uniqueDrivers = Array.from(new Set(data.map(d => d.driver_full_name)))
-        .map(name => data.find(d => d.driver_full_name === name));
+      const uniqueDrivers = Array.from(
+        new Set(data.map((d) => d.driver_full_name)),
+      ).map((name) => data.find((d) => d.driver_full_name === name));
       return uniqueDrivers;
     },
   });
@@ -116,19 +120,28 @@ const EditPenalty = () => {
         `${BASE_URL}/api/getPenaltyType/${penalty.penalty_type}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
-      const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
-      
+      const data =
+        response.data?.data ||
+        (Array.isArray(response.data) ? response.data : []);
+
       // Deduplicate options to fix React duplicate key warning
       const seen = new Set();
-      const uniqueOptions = data.filter(opt => {
-        const val = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.value || opt.id);
+      const uniqueOptions = data.filter((opt) => {
+        const val =
+          typeof opt === "string"
+            ? opt
+            : opt.penalty_type ||
+              opt.penalty_for ||
+              opt.name ||
+              opt.value ||
+              opt.id;
         const duplicate = seen.has(val);
         seen.add(val);
         return !duplicate;
       });
-      
+
       return uniqueOptions;
     },
     enabled: !!penalty.penalty_type,
@@ -161,10 +174,14 @@ const EditPenalty = () => {
         ...prev,
         [name]: value,
       };
-      
+
       // Reset dependent select only if type actually changes and it's not the initial value load
       // We check prev.penalty_type !== "" to ensure we don't clear it when the first real data is being mapped
-      if (name === "penalty_type" && value !== prev.penalty_type && prev.penalty_type !== "") {
+      if (
+        name === "penalty_type" &&
+        value !== prev.penalty_type &&
+        prev.penalty_type !== ""
+      ) {
         updated.penalty_for = "";
       }
 
@@ -173,7 +190,9 @@ const EditPenalty = () => {
 
     if (name === "driver_full_name") {
       const selectedDriver = driversData?.find(
-        (d) => (d.driver_full_name || "").trim().toLowerCase() === (value || "").trim().toLowerCase(),
+        (d) =>
+          (d.driver_full_name || "").trim().toLowerCase() ===
+          (value || "").trim().toLowerCase(),
       );
       if (selectedDriver && selectedDriver.performance_type) {
         setPenalty((prev) => ({
@@ -287,7 +306,9 @@ const EditPenalty = () => {
           <div className="w-12 h-12 border-4 border-[var(--team-color)]/20 rounded-full"></div>
           <div className="absolute top-0 left-0 w-12 h-12 border-4 border-t-[var(--team-color)] rounded-full animate-spin"></div>
         </div>
-        <p className="text-sm font-medium text-gray-500 animate-pulse">Loading penalty data...</p>
+        <p className="text-sm font-medium text-gray-500 animate-pulse">
+          Loading penalty data...
+        </p>
       </div>
     );
   }
@@ -304,7 +325,7 @@ const EditPenalty = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <h1 className="text-md font-semibold text-gray-900">
-                    Edit Driver Penalty
+                    Edit Penalty
                   </h1>
                   <p className="text-xs text-gray-500 mt-1">
                     Update driver penalty record
@@ -371,27 +392,44 @@ const EditPenalty = () => {
                     disabled={isLoadingDrivers}
                   >
                     <SelectTrigger id="driver_full_name">
-                      <SelectValue
-                        placeholder={
-                          isLoadingDrivers
-                            ? "Loading drivers..."
-                            : "Select Driver"
-                        }
-                      />
+                      <div className="flex items-center gap-2">
+                        {isLoadingDrivers && (
+                          <div className="w-3 h-3 border-2 border-[var(--team-color)] border-t-transparent rounded-full animate-spin" />
+                        )}
+                        <SelectValue
+                          placeholder={
+                            isLoadingDrivers
+                              ? "Loading drivers..."
+                              : "Select Driver"
+                          }
+                        />
+                      </div>
                     </SelectTrigger>
                     <SelectContent>
                       {(() => {
                         const finalDrivers = [...(driversData || [])];
                         const currentDriver = penalty.driver_full_name;
 
-                        if (currentDriver && !finalDrivers.some(d => 
-                          (d.driver_full_name || "").trim().toLowerCase() === currentDriver.trim().toLowerCase()
-                        )) {
-                          finalDrivers.unshift({ driver_full_name: currentDriver });
+                        if (
+                          currentDriver &&
+                          !finalDrivers.some(
+                            (d) =>
+                              (d.driver_full_name || "")
+                                .trim()
+                                .toLowerCase() ===
+                              currentDriver.trim().toLowerCase(),
+                          )
+                        ) {
+                          finalDrivers.unshift({
+                            driver_full_name: currentDriver,
+                          });
                         }
 
                         return finalDrivers.map((driver, index) => (
-                          <SelectItem key={index} value={driver.driver_full_name}>
+                          <SelectItem
+                            key={index}
+                            value={driver.driver_full_name}
+                          >
                             {driver.driver_full_name}
                           </SelectItem>
                         ));
@@ -475,7 +513,13 @@ const EditPenalty = () => {
                         {isLoadingPenaltyFor && (
                           <div className="w-3 h-3 border-2 border-[var(--team-color)] border-t-transparent rounded-full animate-spin" />
                         )}
-                        <SelectValue placeholder={isLoadingPenaltyFor ? "Loading options..." : "Select Penalty For"} />
+                        <SelectValue
+                          placeholder={
+                            isLoadingPenaltyFor
+                              ? "Loading options..."
+                              : "Select Penalty For"
+                          }
+                        />
                       </div>
                     </SelectTrigger>
                     <SelectContent>
@@ -483,29 +527,61 @@ const EditPenalty = () => {
                         // Ensure existing value is in options list to avoid showing blank placeholder
                         const finalOptions = [...(penaltyForOptions || [])];
                         const currentVal = penalty.penalty_for;
-                        
-                        if (currentVal && !finalOptions.some(opt => {
-                          const val = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.value || opt.id);
-                          // Case-insensitive trimmed comparison for robust matching
-                          return val?.toString().trim().toLowerCase() === currentVal?.toString().trim().toLowerCase();
-                        })) {
+
+                        if (
+                          currentVal &&
+                          !finalOptions.some((opt) => {
+                            const val =
+                              typeof opt === "string"
+                                ? opt
+                                : opt.penalty_type ||
+                                  opt.penalty_for ||
+                                  opt.name ||
+                                  opt.value ||
+                                  opt.id;
+                            // Case-insensitive trimmed comparison for robust matching
+                            return (
+                              val?.toString().trim().toLowerCase() ===
+                              currentVal?.toString().trim().toLowerCase()
+                            );
+                          })
+                        ) {
                           // Inject current value so Select component can display it correctly
                           finalOptions.unshift(currentVal);
                         }
 
                         return finalOptions.length > 0 ? (
                           finalOptions.map((opt, idx) => {
-                            const val = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.value || opt.id);
-                            const label = typeof opt === "string" ? opt : (opt.penalty_type || opt.penalty_for || opt.name || opt.label || val);
+                            const val =
+                              typeof opt === "string"
+                                ? opt
+                                : opt.penalty_type ||
+                                  opt.penalty_for ||
+                                  opt.name ||
+                                  opt.value ||
+                                  opt.id;
+                            const label =
+                              typeof opt === "string"
+                                ? opt
+                                : opt.penalty_type ||
+                                  opt.penalty_for ||
+                                  opt.name ||
+                                  opt.label ||
+                                  val;
                             return (
-                              <SelectItem key={idx} value={val?.toString() || ""}>
+                              <SelectItem
+                                key={idx}
+                                value={val?.toString() || ""}
+                              >
                                 {label}
                               </SelectItem>
                             );
                           })
                         ) : (
                           <div className="p-2 text-sm text-center text-gray-500">
-                            {penalty.penalty_type ? "No options available" : "Select Penalty Type first"}
+                            {penalty.penalty_type
+                              ? "No options available"
+                              : "Select Penalty Type first"}
                           </div>
                         );
                       })()}

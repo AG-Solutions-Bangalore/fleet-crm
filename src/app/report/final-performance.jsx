@@ -458,6 +458,11 @@ const FleetReportView = ({
               const isEven = i % 2 === 0;
               const rowBg = isEven ? "bg-white" : "bg-gray-50";
 
+              const calculatedClosingBalance =
+                Number(row.opening_balance) +
+                Number(row.finalPayout) -
+                Number(row.driver_payment);
+
               return (
                 <tr
                   key={row.driver_full_name}
@@ -507,12 +512,12 @@ const FleetReportView = ({
                   <td className={cellClass}>{row.driver_payment}</td>
                   <td
                     className={`${cellClass} font-bold text-sm ${
-                      row.closing_balance >= 0
+                      calculatedClosingBalance >= 0
                         ? "text-green-700 bg-green-50"
                         : "text-red-700 bg-red-50"
                     }`}
                   >
-                    {row.closing_balance}
+                    {calculatedClosingBalance}
                   </td>
                 </tr>
               );

@@ -5,7 +5,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import BASE_URL from "@/config/base-url";
 import axios from "axios";
 import Cookies from "js-cookie";
@@ -121,14 +127,6 @@ const CreateDriverPerformance = ({ refetch }) => {
                   <SelectItem value="Uber Green">Uber Green</SelectItem>
                 </SelectContent>
               </Select>
-              {/* <Input
-                id="performance_type"
-                type="text"
-                value={performanceType}
-                onChange={(e) => setPerformanceType(e.target.value)}
-                placeholder="Enter performance type (e.g., Uber Black)"
-                className="w-full"
-              /> */}
             </div>
 
             {/* File Upload Field */}

@@ -95,8 +95,7 @@ const TripList = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      },
-      );
+      });
       return response.data;
     },
     onSuccess: (data) => {
@@ -166,7 +165,7 @@ const TripList = () => {
   }, [searchTerm, previousSearchTerm]);
 
   const {
-    data: tripsData,
+    data: responseData,
     isLoading,
     isError,
     refetch,
@@ -189,11 +188,14 @@ const TripList = () => {
           "Content-Type": "application/json",
         },
       });
-      return response.data.data;
+      return response.data;
     },
     keepPreviousData: true,
     staleTime: 5 * 60 * 1000,
   });
+
+  const tripsData = responseData?.data;
+  const lastTripList = responseData?.lastTrip || [];
 
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
@@ -219,7 +221,7 @@ const TripList = () => {
               "Content-Type": "application/json",
             },
           });
-          return response.data.data;
+          return response.data;
         },
         staleTime: 5 * 60 * 1000,
       });
@@ -247,7 +249,7 @@ const TripList = () => {
                 "Content-Type": "application/json",
               },
             });
-            return response.data.data;
+            return response.data;
           },
           staleTime: 5 * 60 * 1000,
         });
@@ -359,11 +361,11 @@ const TripList = () => {
       size: 120,
     },
     {
-      accessorKey: "trip_product_type",
-      id: "Product Type",
-      header: "Product Type",
+      accessorKey: "trip_performance_type",
+      id: "Running Platform",
+      header: "Running Platform",
       cell: ({ row }) => (
-        <div className="text-xs">{row.getValue("Product Type")}</div>
+        <div className="text-xs">{row.getValue("Running Platform")}</div>
       ),
       size: 120,
     },
@@ -388,7 +390,7 @@ const TripList = () => {
           )}
         </div>
       ),
-      size: 160,
+      size: 400,
     },
     {
       accessorKey: "trip_distance",
@@ -407,7 +409,7 @@ const TripList = () => {
       cell: ({ row }) => (
         <div className="text-xs">{row.getValue("Distance")} km</div>
       ),
-      size: 100,
+      size: 80,
     },
     {
       accessorKey: "trip_ride_fare",
@@ -427,7 +429,7 @@ const TripList = () => {
         const fare = parseFloat(row.getValue("Fare"));
         return <div className="text-xs font-medium">₹{fare.toFixed(2)}</div>;
       },
-      size: 100,
+      size: 80,
     },
     {
       accessorKey: "trip_status",
@@ -474,7 +476,7 @@ const TripList = () => {
           </span>
         );
       },
-      size: 150,
+      size: 200,
     },
 
     {
@@ -524,7 +526,7 @@ const TripList = () => {
           </div>
         );
       },
-      size: 100,
+      size: 30,
     },
   ];
 
@@ -734,7 +736,7 @@ const TripList = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex items-center justify-between py-1">
+      <div className="flex items-center justify-between py-1 gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
@@ -748,6 +750,28 @@ const TripList = () => {
             }}
             className="pl-8 h-9 text-sm bg-gray-50 border-gray-200 focus:border-gray-300 focus:ring-gray-200"
           />
+        </div>
+
+        <div className="hidden lg:flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[50%]">
+          {lastTripList.map((item, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 px-3 py-1 bg-blue-50/50 border border-blue-100 rounded-full shadow-sm flex-shrink-0"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider whitespace-nowrap">
+                  Last: {item.trip_performance_type}
+                </span>
+              </div>
+              <div className="h-4 w-[1px] bg-blue-200" />
+              <span className="text-[11px] text-blue-900 font-semibold whitespace-nowrap">
+                {moment(item.last_trip_request_time).format(
+                  "DD-MM-YYYY HH:mm:ss",
+                )}
+              </span>
+            </div>
+          ))}
         </div>
         <div className="flex flex-col md:flex-row md:ml-auto gap-2 w-full md:w-auto">
           <DropdownMenu>
@@ -793,9 +817,9 @@ const TripList = () => {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
