@@ -38,6 +38,18 @@ const NAVIGATION_CONFIG = {
       icon: LayoutDashboard,
       isActive: false,
     },
+    DRIVER_DASHBOARD: {
+      title: "Driver Dashboard",
+      url: "/d-dashboard",
+      icon: LayoutDashboard,
+      isActive: false,
+    },
+    VEHICLE_DASHBOARD: {
+      title: "Vehicle Dashboard",
+      url: "/v-dashboard",
+      icon: Car,
+      isActive: false,
+    },
 
     DEPOSIT: {
       title: "Deposit",
@@ -128,10 +140,10 @@ const NAVIGATION_CONFIG = {
       isActive: false,
       icon: BarChart3,
       items: [
-        // {
-        //   title: "Performance New",
-        //   url: "/performance-new",
-        // },
+        {
+          title: "Performance New",
+          url: "/performance-new",
+        },
         {
           title: "Driver Performance",
           url: "/report-drivers-performance",
@@ -164,6 +176,14 @@ const NAVIGATION_CONFIG = {
           title: "Vehicle Details",
           url: "/vehicle-details-report",
         },
+        {
+          title: "Day-wise Summary",
+          url: "/day-wise-summary-report",
+        },
+        {
+          title: "Vehicle Summary",
+          url: "/summary-vehicle-wise-report",
+        },
       ],
     },
     SETTINGS: {
@@ -179,6 +199,8 @@ const USER_ROLE_PERMISSIONS = {
   1: {
     navMain: [
       "DASHBOARD",
+      "DRIVER_DASHBOARD",
+      "VEHICLE_DASHBOARD",
       "MASTER",
       "UPLOAD",
       "DEPOSIT",
@@ -193,6 +215,8 @@ const USER_ROLE_PERMISSIONS = {
   2: {
     navMain: [
       "DASHBOARD",
+      "DRIVER_DASHBOARD",
+      "VEHICLE_DASHBOARD",
       "MASTER",
       "UPLOAD",
       "DEPOSIT",

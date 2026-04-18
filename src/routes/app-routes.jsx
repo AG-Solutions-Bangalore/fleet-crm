@@ -43,6 +43,11 @@ import FinalDriverPerformanceReport from "@/app/report/final-performance";
 import CreateDriverPayment from "@/app/driver-payment/create-payment";
 import EditDriverPayment from "@/app/driver-payment/edit-payment";
 import DriverPaymentList from "@/app/driver-payment/payment-list";
+import DayWiseSummaryReport from "@/app/report/day-wise-summary-report";
+import VehicleWiseSummaryReport from "@/app/report/vehicle-wise-summary-report";
+import DriverDashboard from "@/app/dashboard/driver-dashboard";
+import VehicleDashboard from "@/app/dashboard/vehicle-dashboard";
+
 const Login = lazy(() => import("@/app/auth/login"));
 
 const NotFound = lazy(() => import("@/app/errors/not-found"));
@@ -79,6 +84,24 @@ function AppRoutes() {
           element={
             <Suspense fallback={<LoadingBar />}>
               <Home />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/d-dashboard"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <DriverDashboard />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/v-dashboard"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <VehicleDashboard />
             </Suspense>
           }
         />
@@ -315,6 +338,22 @@ function AppRoutes() {
           element={
             <Suspense fallback={<LoadingBar />}>
               <VehicleDetailsReport />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/day-wise-summary-report"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <DayWiseSummaryReport />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/summary-vehicle-wise-report"
+          element={
+            <Suspense fallback={<LoadingBar />}>
+              <VehicleWiseSummaryReport />
             </Suspense>
           }
         />
