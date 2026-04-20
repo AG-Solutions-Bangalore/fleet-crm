@@ -81,7 +81,7 @@ const DriverDashboard = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Driver Dashboard");
 
-      const dataKeys = Object.keys(filteredData[0]);
+      const dataKeys = getHeaders(filteredData);
       const maxCols = dataKeys.length;
 
       // 1. Add Title
@@ -120,6 +120,14 @@ const DriverDashboard = () => {
       filteredData.forEach((row) => {
         const rowData = dataKeys.map((key) => {
           const val = row[key];
+          if (key === "total_trips") {
+            return `${row.total_completed_trips || 0} / ${row.total_trips || 0}`;
+          }
+          if (key === "balance") {
+            return (
+              Number(row.finalPayout || 0) - Number(row.driver_payment || 0)
+            );
+          }
           // Treat specifically as text
           if (key === "driver_full_name" || key === "vehicle_number_plate") {
             return val !== null && val !== undefined ? String(val) : "N/A";
@@ -157,25 +165,39 @@ const DriverDashboard = () => {
 
   const getHeaders = (data) => {
     if (!data || data.length === 0) return [];
-    return Object.keys(data[0]);
+    const keys = Object.keys(data[0]).filter(
+      (key) => key !== "total_completed_trips",
+    );
+
+    const tripsIndex = keys.indexOf("total_trips");
+    if (tripsIndex !== -1 && keys.includes("driver_payment")) {
+      const filtered = keys.filter((k) => k !== "driver_payment");
+      const newTripsIndex = filtered.indexOf("total_trips");
+      filtered.splice(newTripsIndex + 1, 0, "driver_payment");
+      filtered.push("balance");
+      return filtered;
+    }
+    const finalKeys = [...keys, "balance"];
+    return finalKeys;
   };
 
   const formatHeader = (header) => {
     // Specific mappings for misspelled or special keys
     const mappings = {
-      totalearings: "Total Earnings",
-      totalrevenue: "Total Revenue",
-      additionalIncentive: "Additional Incentive",
-      totalCashCollected: "Total Cash Collected",
+      totalearings: "Earnings",
+      totalrevenue: "Revenue",
+      additionalIncentive: "Incentive",
+      totalCashCollected: "Cash Collected",
       totalCashDepositAmount: "Cash Deposit",
       totalQRDepositAmount: "QR Deposit",
-      totalCreditAmount: "Credit Amount",
-      totalDebiitAmount: "Debit Amount",
+      totalCreditAmount: "Credit",
+      totalDebiitAmount: "Debit",
       totalCustomerTipsAmount: "Customer Tips",
-      driver_payment: "Driver Payment",
       total_completed_trips: "Completed Trips",
-      total_trips: "Total Trips",
+      total_trips: "Trips",
+      driver_payment: "Driver Payment",
       finalPayout: "Final Payout",
+      balance: "Balance",
       driver_full_name: "Driver Name",
     };
 
@@ -201,7 +223,9 @@ const DriverDashboard = () => {
       "totalDebiitAmount",
       "totalCustomerTipsAmount",
       "driver_payment",
+      "total_trips",
       "finalPayout",
+      "balance",
     ];
     return financialKeys.includes(key);
   };
@@ -311,7 +335,15 @@ const DriverDashboard = () => {
                               isFinancial(header) && "text-right",
                             )}
                           >
-                            {cellValue(header, row[header])}
+                            {header === "total_trips"
+                              ? `${row.total_completed_trips || 0} / ${row.total_trips || 0}`
+                              : header === "balance"
+                                ? cellValue(
+                                    header,
+                                    Number(row.finalPayout || 0) -
+                                      Number(row.driver_payment || 0),
+                                  )
+                                : cellValue(header, row[header])}
                           </TableCell>
                         ))}
                       </TableRow>

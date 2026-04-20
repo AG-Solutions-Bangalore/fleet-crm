@@ -35,7 +35,7 @@ const ReportTable = ({ data, type }) => {
       acc.qr += Number(row.qr_amount || 0);
       return acc;
     },
-    { earnings: 0, cashCollected: 0, deposit: 0, qr: 0 }
+    { earnings: 0, cashCollected: 0, deposit: 0, qr: 0 },
   );
 
   const calculateBalance = (row) => {
@@ -53,34 +53,68 @@ const ReportTable = ({ data, type }) => {
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="bg-blue-900 text-white">
-            <th className="border p-2 text-left uppercase whitespace-nowrap">Date</th>
-            <th className="border p-2 text-right uppercase whitespace-nowrap">Total Earnings</th>
-            <th className="border p-2 text-right uppercase whitespace-nowrap">Cash Collected</th>
-            <th className="border p-2 text-right uppercase whitespace-nowrap">Cash Deposit</th>
-            <th className="border p-2 text-right uppercase whitespace-nowrap">QR Deposit</th>
-            <th className="border p-2 text-right uppercase whitespace-nowrap bg-red-800">Cash Balance</th>
+            <th className="border p-2 text-left uppercase whitespace-nowrap">
+              Date
+            </th>
+            <th className="border p-2 text-right uppercase whitespace-nowrap">
+              Total Earnings
+            </th>
+            <th className="border p-2 text-right uppercase whitespace-nowrap">
+              Cash Collected
+            </th>
+            <th className="border p-2 text-right uppercase whitespace-nowrap">
+              Cash Deposit
+            </th>
+            <th className="border p-2 text-right uppercase whitespace-nowrap">
+              QR Deposit
+            </th>
+            <th className="border p-2 text-right uppercase whitespace-nowrap bg-red-800">
+              Cash Balance
+            </th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50 text-black hover:bg-blue-50"}>
+            <tr
+              key={i}
+              className={
+                i % 2 === 0
+                  ? "bg-white text-black hover:bg-blue-50"
+                  : "bg-gray-50 text-black hover:bg-blue-50"
+              }
+            >
               <td className="border p-2 whitespace-nowrap font-medium">
                 {moment(row.performance_date).format("DD-MM-YYYY")}
               </td>
               <td className="border p-2 text-right whitespace-nowrap">
-                {Number(row.total_earings).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {Number(row.total_earings).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td className="border p-2 text-right whitespace-nowrap">
-                {Number(row.cash_collected).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {Number(row.cash_collected).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td className="border p-2 text-right whitespace-nowrap">
-                {Number(row.deposit_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {Number(row.deposit_amount).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td className="border p-2 text-right whitespace-nowrap">
-                {Number(row.qr_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {Number(row.qr_amount).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
               <td className="border p-2 text-right whitespace-nowrap font-semibold text-red-600">
-                {calculateBalance(row).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {calculateBalance(row).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </td>
             </tr>
           ))}
@@ -89,19 +123,34 @@ const ReportTable = ({ data, type }) => {
           <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
             <td className="border p-2">TOTAL</td>
             <td className="border p-2 text-right">
-              {totals.earnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totals.earnings.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </td>
             <td className="border p-2 text-right">
-              {totals.cashCollected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totals.cashCollected.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </td>
             <td className="border p-2 text-right">
-              {totals.deposit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totals.deposit.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </td>
             <td className="border p-2 text-right">
-              {totals.qr.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totals.qr.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </td>
             <td className="border p-2 text-right text-red-700">
-              {totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totalBalance.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </td>
           </tr>
         </tfoot>
@@ -157,7 +206,7 @@ const DayWiseSummaryReport = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response?.data?.data && response.data.data.length > 0) {
@@ -178,15 +227,19 @@ const DayWiseSummaryReport = () => {
   // Filtered data based on search and tab
   const filteredData = useMemo(() => {
     if (!reportData) return { uber_black: [], uber_green: [] };
-    
+
     const allData = reportData || [];
-    const black = allData.filter(item => item.performance_type === "Uber Black");
-    const green = allData.filter(item => item.performance_type === "Uber Green");
+    const black = allData.filter(
+      (item) => item.performance_type === "Uber Black",
+    );
+    const green = allData.filter(
+      (item) => item.performance_type === "Uber Green",
+    );
 
     const filterFn = (item) => {
       if (!searchQuery) return true;
-      return Object.values(item).some(val => 
-        String(val).toLowerCase().includes(searchQuery.toLowerCase())
+      return Object.values(item).some((val) =>
+        String(val).toLowerCase().includes(searchQuery.toLowerCase()),
       );
     };
 
@@ -213,14 +266,14 @@ const DayWiseSummaryReport = () => {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal h-11",
-                      !dates.fromDate && "text-muted-foreground"
+                      !dates.fromDate && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dates.fromDate ? (
                       rangeText(dates.fromDate, dates.toDate)
                     ) : (
-                        <span>Pick a date range</span>
+                      <span>Pick a date range</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -294,8 +347,12 @@ const DayWiseSummaryReport = () => {
               className="w-full"
             >
               <TabsList className="mb-4">
-                <TabsTrigger value="uber_black" className="px-8">Uber Black</TabsTrigger>
-                <TabsTrigger value="uber_green" className="px-8">Uber Green</TabsTrigger>
+                <TabsTrigger value="uber_black" className="px-8">
+                  Uber Black
+                </TabsTrigger>
+                <TabsTrigger value="uber_green" className="px-8">
+                  Uber Green
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="uber_black">
                 <ReportTable data={filteredData.uber_black} type="Uber Black" />
@@ -322,12 +379,14 @@ const DayWiseSummaryReport = () => {
           )}
 
           {!reportData && !isLoading && (
-             <div className="py-20 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                    <Search className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-gray-500">Pick a date range and click Generate Report to see data</p>
-             </div>
+            <div className="py-20 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                <Search className="h-8 w-8 text-gray-400" />
+              </div>
+              <p className="text-gray-500">
+                Pick a date range and click Generate Report to see data
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -336,9 +395,9 @@ const DayWiseSummaryReport = () => {
 };
 
 const rangeText = (from, to) => {
-    if(!from) return "Pick a date";
-    if(!to || from === to) return moment(from).format("DD-MM-YYYY");
-    return `${moment(from).format("DD-MM-YYYY")} - ${moment(to).format("DD-MM-YYYY")}`;
-}
+  if (!from) return "Pick a date";
+  if (!to || from === to) return moment(from).format("DD-MM-YYYY");
+  return `${moment(from).format("DD-MM-YYYY")} - ${moment(to).format("DD-MM-YYYY")}`;
+};
 
 export default DayWiseSummaryReport;
