@@ -46,7 +46,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import ImageCell from "@/components/common/ImageCell";
 import { getImageBaseUrl, getNoImageUrl } from "@/utils/imageUtils";
 
@@ -54,28 +54,25 @@ const DriverList = () => {
   const queryClient = useQueryClient();
   const keyDown = useNumericInput();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
+  const currentPage = parseInt(searchParams.get("page") || "1");
+  const [searchTerm, setSearchTerm] = useState(searchQuery);
 
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
+  const pagination = {
+    pageIndex: currentPage - 1,
     pageSize: 10,
-  });
-
-  const [pageInput, setPageInput] = useState("");
-  const storeCurrentPage = () => {
-    Cookies.set("driverReturnPage", (pagination.pageIndex + 1).toString(), {
-      expires: 1,
-    });
   };
 
   const handleEditDriver = (id) => {
-    storeCurrentPage();
-    navigate(`/driver/driver-edit/${id}`);
+    navigate(
+      `/driver/driver-edit/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+    );
   };
   const handleViewDriver = (id) => {
-    navigate(`/driver/driver-view/${id}`);
+    navigate(
+      `/driver/driver-view/${id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+    );
   };
 
   const toggleStatusMutation = useMutation({
@@ -95,7 +92,7 @@ const DriverList = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["drivers", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["drivers", searchQuery, currentPage],
       });
     },
     onError: (error) => {
@@ -108,43 +105,36 @@ const DriverList = () => {
     toggleStatusMutation.mutate({ driverId, newStatus });
   };
 
+  // Page Restoration via URL (Previously Cookie-based) handled by searchParams init
+  const [pageInput, setPageInput] = useState("");
+
   useEffect(() => {
-    const savedPage = Cookies.get("driverReturnPage");
-    if (savedPage) {
-      Cookies.remove("driverReturnPage");
-
-      setTimeout(() => {
-        const pageIndex = parseInt(savedPage) - 1;
-        if (pageIndex >= 0) {
-          setPagination((prev) => ({ ...prev, pageIndex }));
-          setPageInput(savedPage);
-
-          queryClient.invalidateQueries({
-            queryKey: ["drivers"],
-            exact: false,
-          });
-        }
-      }, 100);
-    }
-  }, [queryClient]);
+    setSearchTerm(searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
-        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      if (searchTerm !== searchQuery) {
+        setSearchParams(
+          (prev) => {
+            const newParams = new URLSearchParams(prev);
+            if (searchTerm) {
+              newParams.set("search", searchTerm);
+            } else {
+              newParams.delete("search");
+            }
+            newParams.set("page", "1");
+            return newParams;
+          },
+          { replace: true },
+        );
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, searchQuery, setSearchParams]);
 
   const {
     data: driversPayload,
@@ -153,15 +143,14 @@ const DriverList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["drivers", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["drivers", searchQuery, currentPage],
     queryFn: async () => {
       const token = Cookies.get("token");
-      const params = new URLSearchParams({
-        page: (pagination.pageIndex + 1).toString(),
-      });
+      const params = new URLSearchParams();
+      params.append("page", currentPage.toString());
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (searchQuery) {
+        params.append("search", searchQuery);
       }
 
       const response = await axios.get(`${BASE_URL}/api/driver?${params}`, {
@@ -189,15 +178,15 @@ const DriverList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["drivers", debouncedSearchTerm, nextPage],
+        queryKey: ["drivers", searchQuery, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (searchQuery) {
+            params.append("search", searchQuery);
           }
 
           const response = await axios.get(`${BASE_URL}/api/driver?${params}`, {
@@ -215,19 +204,17 @@ const DriverList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (
-        !queryClient.getQueryData(["drivers", debouncedSearchTerm, prevPage])
-      ) {
+      if (!queryClient.getQueryData(["drivers", searchQuery, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["drivers", debouncedSearchTerm, prevPage],
+          queryKey: ["drivers", searchQuery, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (searchQuery) {
+              params.append("search", searchQuery);
             }
 
             const response = await axios.get(
@@ -246,8 +233,8 @@ const DriverList = () => {
       }
     }
   }, [
-    pagination.pageIndex,
-    debouncedSearchTerm,
+    currentPage,
+    searchQuery,
     queryClient,
     driversData?.last_page,
   ]);
@@ -500,7 +487,11 @@ const DriverList = () => {
     onRowSelectionChange: setRowSelection,
     manualPagination: true,
     pageCount: driversData?.last_page || -1,
-    onPaginationChange: setPagination,
+    onPaginationChange: (updater) => {
+      const nextPagination =
+        typeof updater === "function" ? updater(pagination) : updater;
+      handlePageChange(nextPagination.pageIndex);
+    },
     state: {
       sorting,
       columnFilters,
@@ -515,19 +506,15 @@ const DriverList = () => {
     },
   });
 
-  const handlePageChange = (newPageIndex) => {
-    const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData([
-      "drivers",
-      debouncedSearchTerm,
-      targetPage,
-    ]);
-
-    if (cachedData) {
-      setPagination((prev) => ({ ...prev, pageIndex: newPageIndex }));
-    } else {
-      table.setPageIndex(newPageIndex);
-    }
+  const handlePageChange = (newPage) => {
+    setSearchParams(
+      (prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("page", newPage.toString());
+        return newParams;
+      },
+      { replace: true },
+    );
   };
 
   const handlePageInput = (e) => {
@@ -537,7 +524,7 @@ const DriverList = () => {
     if (value && !isNaN(value)) {
       const pageNum = parseInt(value);
       if (pageNum >= 1 && pageNum <= table.getPageCount()) {
-        handlePageChange(pageNum - 1);
+        handlePageChange(pageNum);
       }
     }
   };
@@ -552,7 +539,7 @@ const DriverList = () => {
         key={1}
         variant={currentPage === 1 ? "default" : "outline"}
         size="sm"
-        onClick={() => handlePageChange(0)}
+        onClick={() => handlePageChange(1)}
         className="h-8 w-8 p-0 text-xs"
       >
         1
@@ -578,7 +565,7 @@ const DriverList = () => {
             key={i}
             variant={currentPage === i ? "default" : "outline"}
             size="sm"
-            onClick={() => handlePageChange(i - 1)}
+            onClick={() => handlePageChange(i)}
             className="h-8 w-8 p-0 text-xs"
           >
             {i}
@@ -601,7 +588,7 @@ const DriverList = () => {
           key={totalPages}
           variant={currentPage === totalPages ? "default" : "outline"}
           size="sm"
-          onClick={() => handlePageChange(totalPages - 1)}
+          onClick={() => handlePageChange(totalPages)}
           className="h-8 w-8 p-0 text-xs"
         >
           {totalPages}
@@ -683,7 +670,9 @@ const DriverList = () => {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link to="/driver/driver-create" onClick={storeCurrentPage}>
+          <Link
+            to={`/driver/driver-create${searchParams.toString() ? `?${searchParams.toString()}` : ""}`}
+          >
             <Button variant="default">
               <SquarePlus className="h-3 w-3 mr-2" /> Create Driver
             </Button>
@@ -764,7 +753,7 @@ const DriverList = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePageChange(pagination.pageIndex - 1)}
+            onClick={() => handlePageChange(currentPage - 1)}
             disabled={!table.getCanPreviousPage()}
             className="h-8 px-2"
           >
@@ -794,7 +783,7 @@ const DriverList = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePageChange(pagination.pageIndex + 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
             disabled={!table.getCanNextPage()}
             className="h-8 px-2"
           >
