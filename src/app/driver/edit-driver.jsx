@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { ArrowLeft, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 const EditDriver = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
   const queryClient = useQueryClient();
   const token = Cookies.get("token");
 
@@ -301,7 +303,7 @@ const EditDriver = () => {
       if (data.code === 201) {
         queryClient.invalidateQueries(["drivers"]);
         toast.success(data.message || "Driver Updated Successfully");
-        navigate("/driver");
+        navigate(`/driver${searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
       } else {
         toast.error(data.message || "Driver Update Error");
       }
@@ -386,7 +388,11 @@ const EditDriver = () => {
           </div>
 
           <Button
-            onClick={() => navigate("/driver")}
+            onClick={() =>
+              navigate(
+                `/driver${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+              )
+            }
             variant="outline"
             size="sm"
             className="flex items-center gap-1 flex-shrink-0 mt-2 sm:mt-0"

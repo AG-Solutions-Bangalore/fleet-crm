@@ -9,7 +9,7 @@ import {
   ImageIcon,
   Printer,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,8 @@ import moment from "moment";
 const ViewDriver = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
   const token = Cookies.get("token");
 
   const {
@@ -111,8 +113,12 @@ const ViewDriver = () => {
                 The driver record could not be retrieved at this time.
               </p>
             </div>
-            <Button
-              onClick={() => navigate("/driver")}
+             <Button
+              onClick={() =>
+                navigate(
+                  `/driver${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+                )
+              }
               variant="outline"
               size="sm"
               className="mt-4 border-red-200 hover:bg-red-50"
@@ -130,7 +136,11 @@ const ViewDriver = () => {
       {/* Report Header (Visible on Screen & Print) */}
       <div className="flex items-center justify-between no-print">
         <Button
-          onClick={() => navigate("/driver")}
+          onClick={() =>
+            navigate(
+              `/driver${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+            )
+          }
           variant="outline"
           size="sm"
           className="flex items-center gap-1.5 font-bold border-gray-200 shadow-sm"

@@ -3,7 +3,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { AlertCircle, ArrowLeft, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 const CreateDriver = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
   const queryClient = useQueryClient();
   const token = Cookies.get("token");
 
@@ -246,7 +248,7 @@ const CreateDriver = () => {
           bank_passbook_cancelled_cheque_image: "",
         });
 
-        navigate("/driver");
+        navigate(`/driver${searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
       } else {
         toast.error(data.message || "Driver Creation Error");
       }
@@ -326,7 +328,11 @@ const CreateDriver = () => {
           </div>
 
           <Button
-            onClick={() => navigate("/driver")}
+            onClick={() =>
+              navigate(
+                `/driver${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+              )
+            }
             variant="outline"
             size="sm"
             className="flex items-center gap-1 flex-shrink-0 mt-2 sm:mt-0"
