@@ -84,7 +84,7 @@ const ReportTable = ({ data, type }) => {
               key={i}
               className={
                 i % 2 === 0
-                  ? "bg-white"
+                  ? "bg-white text-black hover:bg-blue-50"
                   : "bg-gray-50 text-black hover:bg-blue-50"
               }
             >

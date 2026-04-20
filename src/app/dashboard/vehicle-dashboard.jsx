@@ -81,7 +81,7 @@ const VehicleDashboard = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Vehicle Dashboard");
 
-      const dataKeys = Object.keys(filteredData[0]);
+      const dataKeys = getHeaders(filteredData);
       const maxCols = dataKeys.length;
 
       // 1. Add Title
@@ -121,7 +121,13 @@ const VehicleDashboard = () => {
         const rowData = dataKeys.map((key) => {
           const val = row[key];
           // Treat specifically as text
-          if (key === "trip_driver_full_name" || key === "trip_vehicle_number_plate") {
+          if (key === "total_trips") {
+            return `${row.completed_trips || 0} / ${row.total_trips || 0}`;
+          }
+          if (
+            key === "trip_driver_full_name" ||
+            key === "trip_vehicle_number_plate"
+          ) {
             return val !== null && val !== undefined ? String(val) : "N/A";
           }
           // If it's in our numeric lists or looks like a number, cast it
@@ -157,7 +163,7 @@ const VehicleDashboard = () => {
 
   const getHeaders = (data) => {
     if (!data || data.length === 0) return [];
-    return Object.keys(data[0]);
+    return Object.keys(data[0]).filter((key) => key !== "completed_trips");
   };
 
   const formatHeader = (header) => {
@@ -165,7 +171,7 @@ const VehicleDashboard = () => {
       trip_driver_full_name: "Driver Name",
       trip_vehicle_number_plate: "Vehicle Number",
       trip_distance: "Distance (KM)",
-      total_trips: "Total Trips",
+      total_trips: "Trips",
       completed_trips: "Completed Trips",
     };
 
@@ -291,7 +297,9 @@ const VehicleDashboard = () => {
                               isNumeric(header) && "text-right",
                             )}
                           >
-                            {cellValue(header, row[header])}
+                            {header === "total_trips"
+                              ? `${row.completed_trips || 0} / ${row.total_trips || 0}`
+                              : cellValue(header, row[header])}
                           </TableCell>
                         ))}
                       </TableRow>
