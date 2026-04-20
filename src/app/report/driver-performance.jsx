@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import BASE_URL from "@/config/base-url";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { AlertTriangle, Download, Loader } from "lucide-react";
+import { AlertTriangle, Download, Loader, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import moment from "moment";
@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 const MBGDetailModal = ({
   driver,
@@ -51,18 +52,22 @@ const MBGDetailModal = ({
 
   const popupRows = popupFullData || [];
 
-  console.log(driver);
+  // console.log(driver);
 
   const getConditionStatus = (row, conditions) => {
-    if (!conditions) return { allMet: false, failed: [] };
+    const category = row?.performance_type || "Uber Black";
+    const filteredConditions =
+      conditions?.filter((c) => c.condition_for === category) || [];
+
+    if (!filteredConditions.length) return { allMet: false, failed: [] };
 
     const earnings = Number(row.total_earings || 0);
     const hours = Number(row.hours_online || 0);
 
     const failed = [];
 
-    conditions.forEach((cond) => {
-      if (cond.condition_type !== ">=") return; // only check main conditions
+    filteredConditions.forEach((cond) => {
+      if (cond.condition_type !== ">=") return;
 
       const value = Number(cond.condition_amount);
 
@@ -82,20 +87,29 @@ const MBGDetailModal = ({
   };
 
   const calculateDailyMBG = (row, conditions) => {
-    if (!conditions || conditions.length === 0) return 0;
+    const category = row?.performance_type || "Uber Black";
+
+    if (category === "Uber Green") return 0;
+
+    const filteredConditions =
+      conditions?.filter((c) => c.condition_for === category) || [];
+
+    if (!filteredConditions.length) return 0;
 
     const earnings = Number(row.total_earings || 0);
     const hours = Number(row.hours_online || 0);
 
-    const earningCond = conditions.find(
+    const earningCond = filteredConditions.find(
       (c) => c.condition_of === "total_earings" && c.condition_type === ">=",
     );
 
-    const hoursCond = conditions.find(
+    const hoursCond = filteredConditions.find(
       (c) => c.condition_of === "hours_online" && c.condition_type === ">=",
     );
 
-    const perHourCond = conditions.find((c) => c.condition_type === "*");
+    const perHourCond = filteredConditions.find(
+      (c) => c.condition_type === "*",
+    );
 
     const isEarningMet =
       earningCond && earnings >= Number(earningCond.condition_amount);
@@ -127,11 +141,23 @@ const MBGDetailModal = ({
     ?.reduce((acc, r) => acc + Number(r.hours_online || 0), 0)
     ?.toFixed(2);
 
-  const totalconf = (
-    (popupRows?.reduce((acc, r) => acc + Number(r.confirmation_rate || 0), 0) *
-      100) /
-    popupRows?.length
-  ).toFixed(0);
+  const totalDays = popupRows?.reduce(
+    (acc, r) => acc + (Number(r.hours_online || 0) > 0 ? 1 : 0),
+    0,
+  );
+
+  console.log(totalDays);
+
+  const totalconf = totalDays
+    ? (
+        (popupRows.reduce(
+          (acc, r) => acc + Number(r.confirmation_rate || 0),
+          0,
+        ) *
+          100) /
+        totalDays
+      ).toFixed(0)
+    : "0";
 
   const totalTrips = popupRows?.reduce(
     (acc, r) => acc + Number(r.trips_taken || 0),
@@ -158,29 +184,18 @@ const MBGDetailModal = ({
     0,
   );
 
-  const totalCashBalance =
-    totalCashCollection - totalCashDeposited - totalQrDeposited;
-
-  const totalPayout =
-    totalMBG +
-    totalEarnings +
-    totalCashCollection -
-    totalCashDeposited -
-    totalQrDeposited;
-
-  const totalPayoutAfterAdj = totalPayout - totalCashBalance;
-
-  const totalFinalPayout = totalPayoutAfterAdj;
+  const uber = popupRows[0]?.performance_type;
 
   return (
     <Dialog
       open={!!driver?.driver_full_name}
       onOpenChange={(open) => !open && onClose()}
     >
-      <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[80%] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Daily MBG Breakdown — {driver?.driver_full_name || ""}
+          <DialogTitle className="flex justify-between px-2">
+            <p>Daily MBG Breakdown — {driver?.driver_full_name || ""}</p>
+            <p className="text-gray-400 px-10">{uber}</p>
           </DialogTitle>
         </DialogHeader>
 
@@ -263,12 +278,21 @@ const MBGDetailModal = ({
                                 ✓ All Conditions Met
                               </span>
                             ) : (
-                              <span className="text-red-500 text-xs">
-                                {failed.map((f, idx) => (
-                                  <span key={idx} className="block">
-                                    {f}
+                              <span className="text-red-500 text-xs text-nowrap">
+                                {failed.length > 0 ? (
+                                  failed.map((f, idx) => (
+                                    <span key={idx} className="block">
+                                      {f}
+                                    </span>
+                                  ))
+                                ) : (r.performance_type || "Uber Black") ===
+                                  "Uber Green" ? (
+                                  <span className="text-gray-400 italic">
+                                    Conditions not set
                                   </span>
-                                ))}
+                                ) : (
+                                  "N/A"
+                                )}
                               </span>
                             )}
                           </td>
@@ -380,70 +404,33 @@ const FleetReportView = ({
         onClose={() => setSelectedDriver(null)}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+      <div className="max-h-[500px] overflow-y-auto rounded-lg w-full">
         <table className="w-full text-xs border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-blue-900">
             <tr>
-              <th
-                className={`${colHeaderClass} sticky left-0 z-auto bg-blue-900`}
-              >
+              <th className={`${colHeaderClass} sticky left-0 bg-blue-900`}>
                 Driver Name
               </th>
-              <th
-                className={`${colHeaderClass} bg-green-700`}
-                title="Sum of MBG — click driver row to expand"
-              >
-                MBG
-              </th>
-              <th
-                className={colHeaderClass}
-                title="Weekly Acceptance Percentage"
-              >
-                Acc%
-              </th>
-              <th className={colHeaderClass} title="Total Earnings">
-                Tot Earn
-              </th>
-              <th className={colHeaderClass} title="Revenue Incentive">
-                Rev Inc
-              </th>
-              <th className={colHeaderClass} title="Additional Incentive">
-                Add Inc
-              </th>
-              <th className={colHeaderClass} title="Total Collection">
-                Tot Coll
-              </th>
-              <th className={colHeaderClass} title="Total Deposit">
-                Tot CD
-              </th>
-              <th className={colHeaderClass} title="Total Deposit">
-                Tot QD
-              </th>
-              <th
-                className={`${colHeaderClass} bg-red-700`}
-                title="Cash Balance"
-              >
-                Cash Bal
-              </th>
-              <th
-                className={`${colHeaderClass} bg-orange-500`}
-                title="Total Payout"
-              >
-                Tot Payout
-              </th>
-              <th className={colHeaderClass} title="Payout After Adjustments">
-                Payout Adj
-              </th>
+              <th className={`${colHeaderClass} bg-green-700`}>MBG</th>
+              <th className={colHeaderClass}>Acc%</th>
+              <th className={colHeaderClass}>Tot Earn</th>
+              <th className={colHeaderClass}>Rev Inc</th>
+              <th className={colHeaderClass}>Add Inc</th>
+              <th className={colHeaderClass}>Tot Coll</th>
+              <th className={colHeaderClass}>Tot CD</th>
+              <th className={colHeaderClass}>Tot QD</th>
+              <th className={`${colHeaderClass} bg-red-700`}>Cash Bal</th>
+              <th className={`${colHeaderClass} bg-orange-500`}>Tot Payout</th>
+              <th className={colHeaderClass}>Payout Adj</th>
               <th className={colHeaderClass}>Credit</th>
               <th className={colHeaderClass}>Debit</th>
-              <th className={colHeaderClass} title="Customer Trips Completed">
-                Cust Trips
-              </th>
+              <th className={colHeaderClass}>Cust Trips</th>
               <th className={`${colHeaderClass} bg-yellow-500 text-black`}>
                 Final Payout
               </th>
             </tr>
           </thead>
+
           <tbody>
             {reportData.map((row, i) => {
               const isEven = i % 2 === 0;
@@ -460,7 +447,6 @@ const FleetReportView = ({
                   <td
                     className={`${cellClass} text-green-700 font-bold cursor-pointer hover:underline`}
                     onClick={() => setSelectedDriver(row)}
-                    title="Click to see daily breakdown"
                   >
                     {row.mbg}
                   </td>
@@ -511,6 +497,7 @@ const DriverPerformanceReport = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSyncConfirmOpen, setIsSyncConfirmOpen] = useState(false);
   const [mbgLoading, setMbgLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [dates, setDates] = useState({
     fromDate: moment().subtract(6, "days").format("YYYY-MM-DD"),
     toDate: moment().format("YYYY-MM-DD"),
@@ -639,14 +626,36 @@ const DriverPerformanceReport = () => {
     }
   };
 
+  const filteredData = useMemo(() => {
+    if (!reportData) return [];
+    if (!searchQuery) return reportData;
+
+    return reportData.filter((row) =>
+      row.driver_full_name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [reportData, searchQuery]);
+
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto pt-1">
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Driver Performance Report</CardTitle>
+        <CardHeader className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mx-0 px-0">
+            <CardTitle>Driver Performance Report</CardTitle>
+            {reportData?.length > 0 && (
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search driver name..."
+                  className="pl-9 h-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 items-end">
             <div className="flex-1 flex flex-col gap-1.5">
               <label className="text-sm font-medium">Select Start Date</label>
               <Popover>
@@ -786,7 +795,7 @@ const DriverPerformanceReport = () => {
               </div>
             ) : reportData && reportData.length > 0 ? (
               <FleetReportView
-                reportData={reportData}
+                reportData={filteredData}
                 fetchMBGdata={fetchMBGdata}
                 popupData={popupData}
                 mbgLoading={mbgLoading}

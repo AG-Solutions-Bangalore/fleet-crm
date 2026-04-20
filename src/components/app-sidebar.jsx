@@ -2,16 +2,13 @@ import {
   AlertTriangle,
   AudioWaveform,
   BarChart3,
-  Blocks,
   Car,
+  CarTaxiFront,
   Command,
-  Frame,
   GalleryVerticalEnd,
   LayoutDashboard,
-  Package,
   Settings,
   Settings2,
-  ShoppingBag,
   UploadCloud,
   Wallet,
 } from "lucide-react";
@@ -41,7 +38,7 @@ const NAVIGATION_CONFIG = {
     DRIVER_DASHBOARD: {
       title: "Driver Dashboard",
       url: "/d-dashboard",
-      icon: LayoutDashboard,
+      icon: CarTaxiFront,
       isActive: false,
     },
     VEHICLE_DASHBOARD: {
@@ -105,14 +102,14 @@ const NAVIGATION_CONFIG = {
           title: "Trip",
           url: "/trip",
         },
-        {
-          title: "Driver Activity",
-          url: "/activity-driver",
-        },
-        {
-          title: "Driver Auto Position",
-          url: "/position-auto-driver",
-        },
+        // {
+        //   title: "Driver Activity",
+        //   url: "/activity-driver",
+        // },
+        // {
+        //   title: "Driver Auto Position",
+        //   url: "/position-auto-driver",
+        // },
         {
           title: "Driver Performance",
           url: "/list-driver-performance",
@@ -140,10 +137,10 @@ const NAVIGATION_CONFIG = {
       isActive: false,
       icon: BarChart3,
       items: [
-        {
-          title: "Performance New",
-          url: "/performance-new",
-        },
+        // {
+        //   title: "Performance New",
+        //   url: "/performance-new",
+        // },
         {
           title: "Driver Performance",
           url: "/report-drivers-performance",
