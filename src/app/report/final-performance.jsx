@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import BASE_URL from "@/config/base-url";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { AlertTriangle, Download, Loader } from "lucide-react";
+import { AlertTriangle, Download, Loader, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import moment from "moment";
@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 const MBGDetailModal = ({
   driver,
@@ -51,18 +52,22 @@ const MBGDetailModal = ({
 
   const popupRows = popupFullData || [];
 
-  console.log(driver);
+  // console.log(driver);
 
   const getConditionStatus = (row, conditions) => {
-    if (!conditions) return { allMet: false, failed: [] };
+    const category = row?.performance_type || "Uber Black";
+    const filteredConditions =
+      conditions?.filter((c) => c.condition_for === category) || [];
+
+    if (!filteredConditions.length) return { allMet: false, failed: [] };
 
     const earnings = Number(row.total_earings || 0);
     const hours = Number(row.hours_online || 0);
 
     const failed = [];
 
-    conditions.forEach((cond) => {
-      if (cond.condition_type !== ">=") return; // only check main conditions
+    filteredConditions.forEach((cond) => {
+      if (cond.condition_type !== ">=") return;
 
       const value = Number(cond.condition_amount);
 
@@ -82,20 +87,29 @@ const MBGDetailModal = ({
   };
 
   const calculateDailyMBG = (row, conditions) => {
-    if (!conditions || conditions.length === 0) return 0;
+    const category = row?.performance_type || "Uber Black";
+
+    if (category === "Uber Green") return 0;
+
+    const filteredConditions =
+      conditions?.filter((c) => c.condition_for === category) || [];
+
+    if (!filteredConditions.length) return 0;
 
     const earnings = Number(row.total_earings || 0);
     const hours = Number(row.hours_online || 0);
 
-    const earningCond = conditions.find(
+    const earningCond = filteredConditions.find(
       (c) => c.condition_of === "total_earings" && c.condition_type === ">=",
     );
 
-    const hoursCond = conditions.find(
+    const hoursCond = filteredConditions.find(
       (c) => c.condition_of === "hours_online" && c.condition_type === ">=",
     );
 
-    const perHourCond = conditions.find((c) => c.condition_type === "*");
+    const perHourCond = filteredConditions.find(
+      (c) => c.condition_type === "*",
+    );
 
     const isEarningMet =
       earningCond && earnings >= Number(earningCond.condition_amount);
@@ -158,29 +172,18 @@ const MBGDetailModal = ({
     0,
   );
 
-  const totalCashBalance =
-    totalCashCollection - totalCashDeposited - totalQrDeposited;
-
-  const totalPayout =
-    totalMBG +
-    totalEarnings +
-    totalCashCollection -
-    totalCashDeposited -
-    totalQrDeposited;
-
-  const totalPayoutAfterAdj = totalPayout - totalCashBalance;
-
-  const totalFinalPayout = totalPayoutAfterAdj;
+  const uber = popupRows[0]?.performance_type;
 
   return (
     <Dialog
       open={!!driver?.driver_full_name}
       onOpenChange={(open) => !open && onClose()}
     >
-      <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[80%] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Daily MBG Breakdown — {driver?.driver_full_name || ""}
+          <DialogTitle className="flex justify-between px-2">
+            <p>Daily MBG Breakdown — {driver?.driver_full_name || ""}</p>
+            <p className="text-gray-400 px-10">{uber}</p>
           </DialogTitle>
         </DialogHeader>
 
@@ -264,11 +267,20 @@ const MBGDetailModal = ({
                               </span>
                             ) : (
                               <span className="text-red-500 text-xs">
-                                {failed.map((f, idx) => (
-                                  <span key={idx} className="block">
-                                    {f}
+                                {failed.length > 0 ? (
+                                  failed.map((f, idx) => (
+                                    <span key={idx} className="block">
+                                      {f}
+                                    </span>
+                                  ))
+                                ) : (r.performance_type || "Uber Black") ===
+                                  "Uber Green" ? (
+                                  <span className="text-gray-400 italic">
+                                    Conditions not set
                                   </span>
-                                ))}
+                                ) : (
+                                  "N/A"
+                                )}
                               </span>
                             )}
                           </td>
@@ -380,9 +392,9 @@ const FleetReportView = ({
         onClose={() => setSelectedDriver(null)}
       />
 
-      <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+      <div className="max-h-[500px] overflow-y-auto rounded-lg w-full">
         <table className="w-full text-xs border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-blue-900">
             <tr>
               <th
                 className={`${colHeaderClass} sticky left-0 z-auto bg-blue-900`}
@@ -536,6 +548,8 @@ const FinalDriverPerformanceReport = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSyncConfirmOpen, setIsSyncConfirmOpen] = useState(false);
   const [mbgLoading, setMbgLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [dates, setDates] = useState({
     fromDate: moment().subtract(6, "days").format("YYYY-MM-DD"),
     toDate: moment().format("YYYY-MM-DD"),
@@ -665,11 +679,33 @@ const FinalDriverPerformanceReport = () => {
     }
   };
 
+  const filteredData = useMemo(() => {
+    if (!reportData) return [];
+    if (!searchQuery) return reportData;
+
+    return reportData.filter((row) =>
+      row.driver_full_name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [reportData, searchQuery]);
+
   return (
     <div className="w-full mx-auto py-6">
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Driver Performance Report</CardTitle>
+        <CardHeader className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mx-0 px-0">
+            <CardTitle>Driver Performance Report</CardTitle>
+            {reportData?.length > 0 && (
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search driver name..."
+                  className="pl-9 h-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-end">
@@ -812,7 +848,7 @@ const FinalDriverPerformanceReport = () => {
               </div>
             ) : reportData && reportData.length > 0 ? (
               <FleetReportView
-                reportData={reportData}
+                reportData={filteredData}
                 fetchMBGdata={fetchMBGdata}
                 popupData={popupData}
                 mbgLoading={mbgLoading}
