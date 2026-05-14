@@ -1,26 +1,29 @@
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import BASE_URL from "@/config/base-url";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { AlertTriangle, Download, Loader, Search } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import {
+  AlertTriangle,
+  CreditCard,
+  Download,
+  Loader,
+  Search,
+  CalendarIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import moment from "moment";
+import { useNavigate } from "react-router-dom";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Label } from "@radix-ui/react-dropdown-menu";
 import {
   AlertDialog,
@@ -33,515 +36,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-
-const MBGDetailModal = ({
-  driver,
-  onClose,
-  fetchMBGdata,
-  popupData,
-  mbgLoading,
-}) => {
-  useEffect(() => {
-    if (driver?.driver_full_name) {
-      fetchMBGdata(driver?.driver_full_name);
-    }
-  }, [driver]);
-
-  const popupFullData = popupData?.data;
-  const mbgConditions = popupData?.condition_mbg;
-
-  const popupRows = popupFullData || [];
-
-  // console.log(driver);
-
-  const getConditionStatus = (row, conditions) => {
-    const category = row?.performance_type || "Uber Black";
-    const filteredConditions =
-      conditions?.filter((c) => c.condition_for === category) || [];
-
-    if (!filteredConditions.length) return { allMet: false, failed: [] };
-
-    const earnings = Number(row.total_earings || 0);
-    const hours = Number(row.hours_online || 0);
-
-    const failed = [];
-
-    filteredConditions.forEach((cond) => {
-      if (cond.condition_type !== ">=") return;
-
-      const value = Number(cond.condition_amount);
-
-      if (cond.condition_of === "total_earings" && earnings < value) {
-        failed.push(`Earnings < ${value}`);
-      }
-
-      if (cond.condition_of === "hours_online" && hours < value) {
-        failed.push(`Hours < ${value}`);
-      }
-    });
-
-    return {
-      allMet: failed.length === 0,
-      failed,
-    };
-  };
-
-  const calculateDailyMBG = (row, conditions) => {
-    const category = row?.performance_type || "Uber Black";
-
-    if (category === "Uber Green") return 0;
-
-    const filteredConditions =
-      conditions?.filter((c) => c.condition_for === category) || [];
-
-    if (!filteredConditions.length) return 0;
-
-    const earnings = Number(row.total_earings || 0);
-    const hours = Number(row.hours_online || 0);
-
-    const earningCond = filteredConditions.find(
-      (c) => c.condition_of === "total_earings" && c.condition_type === ">=",
-    );
-
-    const hoursCond = filteredConditions.find(
-      (c) => c.condition_of === "hours_online" && c.condition_type === ">=",
-    );
-
-    const perHourCond = filteredConditions.find(
-      (c) => c.condition_type === "*",
-    );
-
-    const isEarningMet =
-      earningCond && earnings >= Number(earningCond.condition_amount);
-
-    const isHoursMet = hoursCond && hours >= Number(hoursCond.condition_amount);
-
-    if (isEarningMet && isHoursMet) {
-      return Number(earningCond.condition_amount_to_show);
-    }
-
-    if (perHourCond) {
-      const rate = Number(perHourCond.condition_amount_to_show);
-      const maxHours = Number(perHourCond.condition_amount);
-
-      const applicableHours = Math.min(hours, maxHours);
-      return applicableHours * rate;
-    }
-
-    return 0;
-  };
-
-  const totalMBG = useMemo(() => {
-    return popupRows.reduce((acc, r) => {
-      return acc + Number(calculateDailyMBG(r, mbgConditions) || 0);
-    }, 0);
-  }, [popupRows, mbgConditions]);
-
-  const totalHrs = popupRows
-    ?.reduce((acc, r) => acc + Number(r.hours_online || 0), 0)
-    ?.toFixed(2);
-
-  const totalconf = (
-    (popupRows?.reduce((acc, r) => acc + Number(r.confirmation_rate || 0), 0) *
-      100) /
-    popupRows?.length
-  ).toFixed(0);
-
-  const totalTrips = popupRows?.reduce(
-    (acc, r) => acc + Number(r.trips_taken || 0),
-    0,
-  );
-
-  const totalEarnings = popupRows?.reduce(
-    (acc, r) => acc + Number(r.total_earings || 0),
-    0,
-  );
-
-  const totalCashCollection = popupRows?.reduce(
-    (acc, r) => acc + Number(r.cash_collected || 0),
-    0,
-  );
-
-  const totalCashDeposited = popupRows?.reduce(
-    (acc, r) => acc + Number(r.deposit_amount || 0),
-    0,
-  );
-
-  const totalQrDeposited = popupRows?.reduce(
-    (acc, r) => acc + Number(r.amount || 0),
-    0,
-  );
-
-  const uber = popupRows[0]?.performance_type;
-
-  return (
-    <Dialog
-      open={!!driver?.driver_full_name}
-      onOpenChange={(open) => !open && onClose()}
-    >
-      <DialogContent className="max-w-[80%] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex justify-between px-2">
-            <p>Daily MBG Breakdown — {driver?.driver_full_name || ""}</p>
-            <p className="text-gray-400 px-10">{uber}</p>
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* ✅ LOADING INSIDE MODAL */}
-        {mbgLoading ? (
-          <div className="flex justify-center items-center h-[300px]">
-            <Loader className="h-8 w-8 animate-spin text-gray-500" />
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto max-h-full">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-yellow-400 text-black">
-                    <th className="border p-2 text-left">Date</th>
-                    <th className="border p-2 text-right">Hours Online</th>
-                    <th className="border p-2 text-right">Confirmation %</th>
-                    <th className="border p-2 text-right">Trips Taken</th>
-                    <th className="border p-2 text-right">Daily Earning</th>
-                    <th className="border p-2 text-right">Cash Collection</th>
-                    <th className="border p-2 text-right">Daily MBG</th>
-                    <th className="border p-2 text-right">Cash D</th>
-                    <th className="border p-2 text-right">QR D</th>
-                    <th className="border p-2 text-left">Conditions Met</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {popupFullData && popupFullData.length > 0 ? (
-                    popupFullData.map((r, i) => {
-                      const hours = Number(r.hours_online || 0);
-
-                      const { allMet, failed } = getConditionStatus(
-                        r,
-                        mbgConditions,
-                      );
-
-                      return (
-                        <tr key={i}>
-                          <td className="border p-2">
-                            {r.performance_date
-                              ? moment(r.performance_date).format("DD-MM-YYYY")
-                              : "—"}
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {hours.toFixed(2)}
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {(r.confirmation_rate * 100 || 0).toFixed(0)}%
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {r.trips_taken || 0}
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {Number(r.total_earings || 0).toFixed(0)}
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {Number(r.cash_collected || 0).toFixed(0)}
-                          </td>
-
-                          <td className="border p-2 text-right text-green-700 font-semibold">
-                            {calculateDailyMBG(r, mbgConditions).toFixed(0)}
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {Number(r.deposit_amount || 0).toFixed(0)}
-                          </td>
-
-                          <td className="border p-2 text-right">
-                            {Number(r.amount || 0).toFixed(0)}
-                          </td>
-                          <td className="border p-2">
-                            {allMet ? (
-                              <span className="text-green-600 font-semibold">
-                                ✓ All Conditions Met
-                              </span>
-                            ) : (
-                              <span className="text-red-500 text-xs">
-                                {failed.length > 0 ? (
-                                  failed.map((f, idx) => (
-                                    <span key={idx} className="block">
-                                      {f}
-                                    </span>
-                                  ))
-                                ) : (r.performance_type || "Uber Black") ===
-                                  "Uber Green" ? (
-                                  <span className="text-gray-400 italic">
-                                    Conditions not set
-                                  </span>
-                                ) : (
-                                  "N/A"
-                                )}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="text-center py-4 text-gray-400"
-                      >
-                        No MBG data available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                {popupFullData && popupFullData.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-red-50 text-black">
-                      <th className="border p-2 text-left">Total</th>
-                      <th className="border p-2 text-right">{totalHrs}</th>
-                      <th className="border p-2 text-right">{totalconf}%</th>
-                      <th className="border p-2 text-right">{totalTrips}</th>
-                      <th className="border p-2 text-right">
-                        {totalEarnings.toFixed(0)}
-                      </th>
-                      <th className="border p-2 text-right">
-                        {totalCashCollection.toFixed(0)}
-                      </th>
-                      <th className="border p-2 text-right font-bold">
-                        {totalMBG.toFixed(0)}
-                      </th>
-                      <th className="border p-2 text-right">
-                        {totalCashDeposited.toFixed(0)}
-                      </th>
-                      <th className="border p-2 text-right">
-                        {totalQrDeposited.toFixed(0)}
-                      </th>
-                      <th className="border p-2"></th>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              {[
-                [" MBG", `${driver?.mbg}`],
-                [" Total Earning", `${driver?.totalearings}`],
-                [" Revenue Incentive", `${driver?.totalrevenue}`],
-                [" Additional Incentive", `${driver?.additionalIncentive}`],
-                [" Cash Collection", `${driver?.totalCashCollected}`],
-                [" Cash Deposited", `${driver?.totalCashDepositAmount}`],
-                [" Cash Balance ", `${driver?.cashBalance}`],
-                [" QR Deposited", `${driver?.totalQRDepositAmount}`],
-                [" Total Payout ", `${driver?.totalPayout}`],
-                [" Payout After Adj ", `${driver?.payoutAdj}`],
-                [" Credit", `${driver?.totalCreditAmount}`],
-                [" Debit ", `${driver?.totalDebiitAmount}`],
-                [" Customer Trips ", `${driver?.totalCustomerTipsAmount}`],
-                [" Final Payout ", `${driver?.finalPayout}`],
-              ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex justify-between bg-gray-50 rounded p-2"
-                >
-                  <span className="text-gray-600">{label}</span>
-                  <span className="font-semibold">{value}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const FleetReportView = ({
-  reportData,
-  fetchMBGdata,
-  popupData,
-  mbgLoading,
-}) => {
-  const [selectedDriver, setSelectedDriver] = useState(null);
-
-  if (!reportData || reportData.length === 0) {
-    return (
-      <p className="text-center text-muted-foreground py-8">
-        No data available for the selected date range
-      </p>
-    );
-  }
-
-  const colHeaderClass =
-    "border border-gray-300 p-2 text-center text-xs font-bold whitespace-nowrap bg-blue-900 text-white";
-  const cellClass =
-    "border border-gray-300 p-2 text-right text-xs whitespace-nowrap";
-  const nameCellClass =
-    "border border-gray-300 p-2 text-left text-xs font-semibold whitespace-nowrap sticky left-0 bg-white";
-
-  return (
-    <>
-      <MBGDetailModal
-        driver={selectedDriver}
-        fetchMBGdata={fetchMBGdata}
-        popupData={popupData}
-        mbgLoading={mbgLoading} // ✅ new prop
-        onClose={() => setSelectedDriver(null)}
-      />
-
-      <div className="max-h-[500px] overflow-y-auto rounded-lg w-full">
-        <table className="w-full text-xs border-collapse">
-          <thead className="sticky top-0 z-10 bg-blue-900">
-            <tr>
-              <th
-                className={`${colHeaderClass} sticky left-0 z-auto bg-blue-900`}
-              >
-                Driver Name
-              </th>
-              <th className={colHeaderClass} title="Opening Balance">
-                Opening
-              </th>
-              <th
-                className={`${colHeaderClass} bg-green-700`}
-                title="Sum of MBG — click driver row to expand"
-              >
-                MBG
-              </th>
-              <th
-                className={colHeaderClass}
-                title="Weekly Acceptance Percentage"
-              >
-                Acc%
-              </th>
-              <th className={colHeaderClass} title="Total Earnings">
-                Tot Earn
-              </th>
-              <th className={colHeaderClass} title="Revenue Incentive">
-                Rev Inc
-              </th>
-              <th className={colHeaderClass} title="Additional Incentive">
-                Add Inc
-              </th>
-              <th className={colHeaderClass} title="Total Collection">
-                Tot Coll
-              </th>
-              <th className={colHeaderClass} title="Total Deposit">
-                Tot CD
-              </th>
-              <th className={colHeaderClass} title="Total Deposit">
-                Tot QD
-              </th>
-              <th
-                className={`${colHeaderClass} bg-red-700`}
-                title="Cash Balance"
-              >
-                Cash Bal
-              </th>
-              <th
-                className={`${colHeaderClass} bg-orange-500`}
-                title="Total Payout"
-              >
-                Tot Payout
-              </th>
-              <th className={colHeaderClass} title="Payout After Adjustments">
-                Payout Adj
-              </th>
-              <th className={colHeaderClass}>Credit</th>
-              <th className={colHeaderClass}>Debit</th>
-              <th className={colHeaderClass} title="Customer Trips Completed">
-                Cust Trips
-              </th>
-              <th className={`${colHeaderClass} bg-yellow-500 text-black`}>
-                Final Payout
-              </th>
-              <th className={colHeaderClass} title="Paid Amount">
-                Paid
-              </th>
-              <th className={`${colHeaderClass} bg-yellow-500 text-black`}>
-                Closing
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportData.map((row, i) => {
-              const isEven = i % 2 === 0;
-              const rowBg = isEven ? "bg-white" : "bg-gray-50";
-
-              const calculatedClosingBalance =
-                Number(row.opening_balance) +
-                Number(row.finalPayout) -
-                Number(row.driver_payment);
-
-              return (
-                <tr
-                  key={row.driver_full_name}
-                  className={`${rowBg} hover:bg-blue-50`}
-                >
-                  <td className={`${nameCellClass} ${rowBg}`}>
-                    {row.driver_full_name}
-                  </td>
-                  <td className={cellClass}>{row.opening_balance}</td>
-                  <td
-                    className={`${cellClass} text-green-700 font-bold cursor-pointer hover:underline`}
-                    onClick={() => setSelectedDriver(row)}
-                    title="Click to see daily breakdown"
-                  >
-                    {row.mbg}
-                  </td>
-                  <td className={cellClass}>{row.acceptence}%</td>
-                  <td className={cellClass}>{row.totalearings}</td>
-                  <td className={cellClass}>{row.totalrevenue}</td>
-                  <td className={cellClass}>{row.additionalIncentive}</td>
-                  <td className={cellClass}>{row.totalCashCollected}</td>
-                  <td className={cellClass}>{row.totalCashDepositAmount}</td>
-                  <td className={cellClass}>{row.totalQRDepositAmount}</td>
-                  <td
-                    className={`${cellClass} bg-red-100 text-red-700 font-semibold`}
-                  >
-                    {row.cashBalance}
-                  </td>
-                  <td
-                    className={`${cellClass} bg-orange-100 text-orange-700 font-semibold`}
-                  >
-                    {row.totalPayout}
-                  </td>
-                  <td className={cellClass}>{row.payoutAdj}</td>
-                  <td className={cellClass}>{row.totalCreditAmount}</td>
-                  <td className={cellClass}>{row.totalDebiitAmount}</td>
-                  <td className={cellClass}>{row.totalCustomerTipsAmount}</td>
-                  <td
-                    className={`${cellClass} font-bold text-sm ${
-                      row.finalPayout >= 0
-                        ? "text-green-700 bg-green-50"
-                        : "text-red-700 bg-red-50"
-                    }`}
-                  >
-                    {row.finalPayout}
-                  </td>
-                  <td className={cellClass}>{row.driver_payment}</td>
-                  <td
-                    className={`${cellClass} font-bold text-sm ${
-                      calculatedClosingBalance >= 0
-                        ? "text-green-700 bg-green-50"
-                        : "text-red-700 bg-red-50"
-                    }`}
-                  >
-                    {calculatedClosingBalance}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-};
+import FleetReportView from "./components/FinalDriverPerformanceReport/FleetReportView";
 
 const FinalDriverPerformanceReport = () => {
+  const navigate = useNavigate();
   const [reportData, setReportData] = useState(null);
   const [popupData, setPopupData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -687,6 +185,144 @@ const FinalDriverPerformanceReport = () => {
       row.driver_full_name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [reportData, searchQuery]);
+
+  const exportToExcel = async () => {
+    if (!filteredData.length) {
+      toast.error("No data to export");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Final Performance");
+
+      const headers = [
+        "Driver Name",
+        "Opening",
+        "MBG",
+        "Acc%",
+        "Total Earnings",
+        "Revenue Incentive",
+        "Additional Incentive",
+        "Total Collection",
+        "Total Cash Deposit",
+        "Total QR Deposit",
+        "Cash Balance",
+        "Total Payout",
+        "Payout After Adjustment",
+        "Credit",
+        "Debit",
+        "Customer Trips",
+        "Final Payout",
+        "Paid",
+        "Closing",
+      ];
+
+      worksheet.mergeCells(1, 1, 1, headers.length);
+      const titleCell = worksheet.getCell(1, 1);
+      titleCell.value = "Final Driver Performance Report";
+      titleCell.font = { bold: true, size: 14 };
+      titleCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      worksheet.mergeCells(2, 1, 2, headers.length);
+      const rangeCell = worksheet.getCell(2, 1);
+      rangeCell.value = `From: ${dates.fromDate}  To: ${dates.toDate}`;
+      rangeCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      const headerRow = worksheet.getRow(4);
+      headerRow.values = headers;
+      headerRow.font = { bold: true };
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFEAF2FF" },
+        };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      filteredData.forEach((row) => {
+        const closing =
+          Number(row.opening_balance || 0) +
+          Number(row.finalPayout || 0) -
+          Number(row.driver_payment || 0);
+
+        worksheet.addRow([
+          row.driver_full_name,
+          Number(row.opening_balance || 0),
+          Number(row.mbg || 0),
+          `${row.acceptence || 0}%`,
+          Number(row.totalearings || 0),
+          Number(row.totalrevenue || 0),
+          Number(row.additionalIncentive || 0),
+          Number(row.totalCashCollected || 0),
+          Number(row.totalCashDepositAmount || 0),
+          Number(row.totalQRDepositAmount || 0),
+          Number(row.cashBalance || 0),
+          Number(row.totalPayout || 0),
+          Number(row.payoutAdj || 0),
+          Number(row.totalCreditAmount || 0),
+          Number(row.totalDebiitAmount || 0),
+          Number(row.totalCustomerTipsAmount || 0),
+          Number(row.finalPayout || 0),
+          Number(row.driver_payment || 0),
+          closing,
+        ]);
+      });
+
+      worksheet.columns.forEach((column, index) => {
+        column.width = index === 0 ? 28 : 16;
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(
+        blob,
+        `final-performance-report_${dates.fromDate}_to_${dates.toDate}.xlsx`,
+      );
+      toast.success("Excel downloaded successfully");
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast.error("Failed to download Excel");
+    }
+  };
+
+  const handleAddDriverPayment = () => {
+    if (!reportData?.length) {
+      toast.error("Please generate report first");
+      return;
+    }
+
+    const negativePayoutDrivers = reportData.filter(
+      (row) => Number(row.finalPayout || 0) < 0,
+    );
+
+    if (!negativePayoutDrivers.length) {
+      toast.error("No negative final payout drivers found");
+      return;
+    }
+
+    navigate("/paid-driver/create-payment", {
+      state: {
+        paymentData: {
+          driver_payment_date: dates.toDate,
+          subs: negativePayoutDrivers.map((row) => ({
+            driver_payment_full_name: row.driver_full_name,
+            driver_payment: String(row.finalPayout),
+            isPrefilled: true,
+          })),
+        },
+      },
+    });
+  };
 
   return (
     <div className="w-full mx-auto py-6">
@@ -839,6 +475,29 @@ const FinalDriverPerformanceReport = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+            )}
+            {reportData?.length > 0 && (
+              <>
+                <div>
+                  <Button
+                    onClick={exportToExcel}
+                    variant="outline"
+                    className="h-11 w-full"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Excel Download
+                  </Button>
+                </div>
+                <div>
+                  <Button
+                    onClick={handleAddDriverPayment}
+                    className="h-11 w-full bg-green-700 hover:bg-green-800"
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Add Driver Payment
+                  </Button>
+                </div>
+              </>
             )}
           </div>
           <div className="mt-2">

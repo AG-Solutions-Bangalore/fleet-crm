@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { ArrowLeft, CreditCard, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import moment from "moment";
 
@@ -22,12 +22,18 @@ import BASE_URL from "@/config/base-url";
 
 const CreateDriverPayment = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const token = Cookies.get("token");
+  const prefilledPaymentData = location.state?.paymentData;
 
   const [paymentForm, setPaymentForm] = useState({
-    driver_payment_date: moment().format("YYYY-MM-DD"),
-    subs: [{ driver_payment_full_name: "", driver_payment: "" }],
+    driver_payment_date:
+      prefilledPaymentData?.driver_payment_date || moment().format("YYYY-MM-DD"),
+    subs:
+      prefilledPaymentData?.subs?.length > 0
+        ? prefilledPaymentData.subs
+        : [{ driver_payment_full_name: "", driver_payment: "" }],
   });
 
   // Fetch Drivers
@@ -41,6 +47,29 @@ const CreateDriverPayment = () => {
     },
   });
 
+  const driverOptions = useMemo(() => {
+    const optionMap = new Map();
+
+    driversData?.forEach((driver) => {
+      if (driver.driver_full_name) {
+        optionMap.set(driver.driver_full_name, driver);
+      }
+    });
+
+    paymentForm.subs.forEach((sub) => {
+      if (
+        sub.driver_payment_full_name &&
+        !optionMap.has(sub.driver_payment_full_name)
+      ) {
+        optionMap.set(sub.driver_payment_full_name, {
+          driver_full_name: sub.driver_payment_full_name,
+        });
+      }
+    });
+
+    return Array.from(optionMap.values());
+  }, [driversData, paymentForm.subs]);
+
   const onDateChange = (e) => {
     setPaymentForm((prev) => ({
       ...prev,
@@ -53,7 +82,11 @@ const CreateDriverPayment = () => {
       ...prev,
       subs: [
         ...prev.subs,
-        { driver_payment_full_name: "", driver_payment: "" },
+        {
+          driver_payment_full_name: "",
+          driver_payment: "",
+          isPrefilled: false,
+        },
       ],
     }));
   };
@@ -134,7 +167,15 @@ const CreateDriverPayment = () => {
 
     if (!validateForm()) return;
 
-    createPaymentMutation.mutate(paymentForm);
+    createPaymentMutation.mutate({
+      driver_payment_date: paymentForm.driver_payment_date,
+      subs: paymentForm.subs.map(
+        ({ driver_payment_full_name, driver_payment }) => ({
+          driver_payment_full_name,
+          driver_payment,
+        }),
+      ),
+    });
   };
 
   return (
@@ -225,37 +266,51 @@ const CreateDriverPayment = () => {
                         <Label className="text-[11px] font-medium text-gray-500">
                           Select Driver *
                         </Label>
-                        <Select
-                          value={sub.driver_payment_full_name}
-                          onValueChange={(value) =>
-                            updateSubField(
-                              index,
-                              "driver_payment_full_name",
-                              value,
-                            )
-                          }
-                          disabled={isLoadingDrivers}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue
-                              placeholder={
-                                isLoadingDrivers
-                                  ? "Loading drivers..."
-                                  : "Select Driver"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {driversData?.map((driver, idx) => (
-                              <SelectItem
-                                key={idx}
-                                value={driver.driver_full_name}
-                              >
-                                {driver.driver_full_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {sub.isPrefilled ? (
+                          <Input
+                            value={sub.driver_payment_full_name}
+                            onChange={(e) =>
+                              updateSubField(
+                                index,
+                                "driver_payment_full_name",
+                                e.target.value,
+                              )
+                            }
+                            className="h-9 bg-gray-50"
+                          />
+                        ) : (
+                          <Select
+                            value={sub.driver_payment_full_name}
+                            onValueChange={(value) =>
+                              updateSubField(
+                                index,
+                                "driver_payment_full_name",
+                                value,
+                              )
+                            }
+                            disabled={isLoadingDrivers}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue
+                                placeholder={
+                                  isLoadingDrivers
+                                    ? "Loading drivers..."
+                                    : "Select Driver"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {driverOptions.map((driver, idx) => (
+                                <SelectItem
+                                  key={idx}
+                                  value={driver.driver_full_name}
+                                >
+                                  {driver.driver_full_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
 
                       {/* Amount Input */}
