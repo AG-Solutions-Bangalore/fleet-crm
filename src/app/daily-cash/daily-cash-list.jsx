@@ -38,8 +38,23 @@ import {
 } from "@tanstack/react-table";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  ArrowUpDown,
+  CalendarIcon,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import moment from "moment";
 import CreateDailyCash from "./create-daily-cash";
@@ -177,6 +192,79 @@ const DailyCashList = () => {
     keepPreviousData: true,
     staleTime: 5 * 60 * 1000,
   });
+
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const {
+    data: dailyCashPushDatesResponse,
+    isLoading: isPushDatesLoading,
+    refetch: refetchPushDates,
+  } = useQuery({
+    queryKey: ["daily-cash-push-dates"],
+    queryFn: async () => {
+      const token = Cookies.get("token");
+      const response = await axios.get(
+        `${BASE_URL}/api/getDailyCashPushDate`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      return response.data;
+    },
+  });
+
+  const categorizedDates = useMemo(() => {
+    const data = dailyCashPushDatesResponse?.data || dailyCashPushDatesResponse;
+    if (!data) return {};
+
+    // Check if data is an object containing arrays like { "Uber Black": [...], "Uber Green": [...] }
+    if (typeof data === "object" && !Array.isArray(data)) {
+      const result = {};
+      let hasCategories = false;
+      for (const [key, val] of Object.entries(data)) {
+        if (Array.isArray(val)) {
+          hasCategories = true;
+          const set = new Set();
+          val.forEach((item) => {
+            const dateStr =
+              typeof item === "string"
+                ? item
+                : item?.daily_cash_push_date ||
+                  item?.push_date ||
+                  item?.cash_push_date ||
+                  item?.date;
+            if (dateStr && moment(dateStr).isValid()) {
+              set.add(moment(dateStr).format("YYYY-MM-DD"));
+            }
+          });
+          result[key] = set;
+        }
+      }
+      if (hasCategories && Object.keys(result).length > 0) {
+        return result;
+      }
+    }
+
+    // Fallback: single flat list
+    const set = new Set();
+    const list = Array.isArray(data) ? data : [];
+    list.forEach((item) => {
+      const dateVal =
+        typeof item === "string"
+          ? item
+          : item?.daily_cash_push_date ||
+            item?.push_date ||
+            item?.cash_push_date ||
+            item?.date;
+      if (dateVal && moment(dateVal).isValid()) {
+        set.add(moment(dateVal).format("YYYY-MM-DD"));
+      }
+    });
+    return { "Daily Cash Push Dates": set };
+  }, [dailyCashPushDatesResponse]);
 
   useEffect(() => {
     const currentPage = pagination.pageIndex + 1;
@@ -618,7 +706,68 @@ const DailyCashList = () => {
             className="pl-8 h-9 text-sm bg-gray-50 border-gray-200 focus:border-gray-300 focus:ring-gray-200"
           />
         </div>
-        <div className="flex flex-col md:flex-row md:ml-auto gap-2 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row md:ml-auto gap-2 w-full md:w-auto items-center">
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 border-gray-200 hover:bg-gray-50"
+              >
+                <CalendarIcon className="h-4 w-4 text-green-600" />
+                <span className="text-xs">Calendar</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-auto p-4 max-w-[95vw] overflow-x-auto">
+              <div className="flex items-center justify-between pb-2 mb-3 border-b">
+                <p className="text-xs font-semibold text-gray-800">Daily Cash Push Dates</p>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-600"></span>
+                  <span>Matched Date</span>
+                </div>
+              </div>
+              {isPushDatesLoading ? (
+                <div className="flex justify-center items-center py-8 min-w-[280px]">
+                  <Loader className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {Object.entries(categorizedDates).map(([category, datesSet]) => {
+                    const isMatched = (date) => datesSet.has(moment(date).format("YYYY-MM-DD"));
+                    const datesArray = Array.from(datesSet).sort();
+                    const defaultM = datesArray.length > 0
+                      ? moment(datesArray[datesArray.length - 1]).toDate()
+                      : new Date();
+
+                    return (
+                      <div key={category} className="flex flex-col items-center border rounded-lg p-2 bg-gray-50/50">
+                        {Object.keys(categorizedDates).length > 1 && (
+                          <div className="flex items-center gap-2 mb-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-md w-full justify-center">
+                            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                            <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">
+                              {category}
+                            </span>
+                          </div>
+                        )}
+                        <Calendar
+                          mode="single"
+                          defaultMonth={defaultM}
+                          modifiers={{
+                            matched: isMatched,
+                          }}
+                          modifiersClassNames={{
+                            matched:
+                              "!bg-green-600 !text-white font-bold hover:!bg-green-700 hover:!text-white rounded-md shadow-sm",
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9">
@@ -641,7 +790,12 @@ const DailyCashList = () => {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <CreateDailyCash refetch={refetch} />
+          <CreateDailyCash
+            refetch={() => {
+              refetch();
+              refetchPushDates();
+            }}
+          />
         </div>
       </div>
 

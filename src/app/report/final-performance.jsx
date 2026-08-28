@@ -198,6 +198,7 @@ const FinalDriverPerformanceReport = () => {
 
       const headers = [
         "Driver Name",
+        "Performance Type",
         "Opening",
         "MBG",
         "Acc%",
@@ -255,6 +256,7 @@ const FinalDriverPerformanceReport = () => {
 
         worksheet.addRow([
           row.driver_full_name,
+          row.performance_type || "-",
           Number(row.opening_balance || 0),
           Number(row.mbg || 0),
           `${row.acceptence || 0}%`,

@@ -411,6 +411,7 @@ const FleetReportView = ({
               <th className={`${colHeaderClass} sticky left-0 bg-blue-900`}>
                 Driver Name
               </th>
+              <th className={colHeaderClass}>Performance Type</th>
               <th className={`${colHeaderClass} bg-green-700`}>MBG</th>
               <th className={colHeaderClass}>Acc%</th>
               <th className={colHeaderClass}>Tot Earn</th>
@@ -443,6 +444,9 @@ const FleetReportView = ({
                 >
                   <td className={`${nameCellClass} ${rowBg}`}>
                     {row.driver_full_name}
+                  </td>
+                  <td className="border border-gray-300 p-2 text-center text-xs whitespace-nowrap font-medium text-gray-700">
+                    {row.performance_type || "-"}
                   </td>
                   <td
                     className={`${cellClass} text-green-700 font-bold cursor-pointer hover:underline`}

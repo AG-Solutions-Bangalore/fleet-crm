@@ -43,6 +43,7 @@ const FleetReportView = ({
               >
                 Driver Name
               </th>
+              <th className={colHeaderClass}>Performance Type</th>
               <th className={colHeaderClass} title="Opening Balance">
                 Opening
               </th>
@@ -124,6 +125,9 @@ const FleetReportView = ({
                 >
                   <td className={`${nameCellClass} ${rowBg}`}>
                     {row.driver_full_name}
+                  </td>
+                  <td className="border border-gray-300 p-2 text-center text-xs whitespace-nowrap font-medium text-gray-700">
+                    {row.performance_type || "-"}
                   </td>
                   <td className={cellClass}>{row.opening_balance}</td>
                   <td
