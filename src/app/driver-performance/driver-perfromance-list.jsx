@@ -70,7 +70,11 @@ const DriverPerformanceList = () => {
   const keyDown = useNumericInput();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPerformance, setSelectedPerformance] = useState(null);
 
@@ -112,7 +116,7 @@ const DriverPerformanceList = () => {
       queryClient.invalidateQueries({
         queryKey: [
           "driver-performance",
-          debouncedSearchTerm,
+          apiSearchTerm,
           pagination.pageIndex + 1,
         ],
       });
@@ -161,21 +165,16 @@ const DriverPerformanceList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: responseData,
@@ -186,7 +185,7 @@ const DriverPerformanceList = () => {
   } = useQuery({
     queryKey: [
       "driver-performance",
-      debouncedSearchTerm,
+      apiSearchTerm,
       pagination.pageIndex + 1,
     ],
     queryFn: async () => {
@@ -195,8 +194,8 @@ const DriverPerformanceList = () => {
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(
@@ -294,15 +293,15 @@ const DriverPerformanceList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["driver-performance", debouncedSearchTerm, nextPage],
+        queryKey: ["driver-performance", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -326,20 +325,20 @@ const DriverPerformanceList = () => {
       if (
         !queryClient.getQueryData([
           "driver-performance",
-          debouncedSearchTerm,
+          apiSearchTerm,
           prevPage,
         ])
       ) {
         queryClient.prefetchQuery({
-          queryKey: ["driver-performance", debouncedSearchTerm, prevPage],
+          queryKey: ["driver-performance", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -359,7 +358,7 @@ const DriverPerformanceList = () => {
     }
   }, [
     pagination.pageIndex,
-    debouncedSearchTerm,
+    apiSearchTerm,
     queryClient,
     performancesData?.last_page,
   ]);
@@ -627,8 +626,24 @@ const DriverPerformanceList = () => {
     },
   ];
 
+  const rawList = performancesData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_full_name || ""} ${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_email || ""} ${item.driver_mobile || ""} ${item.performance_type || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: performancesData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -659,7 +674,7 @@ const DriverPerformanceList = () => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData([
       "driver-performance",
-      debouncedSearchTerm,
+      apiSearchTerm,
       targetPage,
     ]);
 

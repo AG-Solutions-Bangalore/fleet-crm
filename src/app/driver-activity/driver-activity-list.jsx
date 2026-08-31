@@ -39,7 +39,7 @@ import {
 import axios from "axios";
 import Cookies from "js-cookie";
 import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import CreateDriverActivity from "./create-driver-activity";
 
@@ -48,7 +48,11 @@ const DriverActivityList = () => {
   const keyDown = useNumericInput();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
 
@@ -84,7 +88,7 @@ const DriverActivityList = () => {
       toast.success(data.message || "Driver activity deleted successfully");
       // Invalidate and refetch activities query
       queryClient.invalidateQueries({
-        queryKey: ["driver-activities", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["driver-activities", apiSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
       setSelectedActivity(null);
@@ -129,20 +133,16 @@ const DriverActivityList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
-        setPagination(prev => ({ ...prev, pageIndex: 0 }));
+      if (searchTerm !== debouncedSearchTerm) {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: activitiesData,
@@ -151,15 +151,15 @@ const DriverActivityList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["driver-activities", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["driver-activities", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(
@@ -184,15 +184,15 @@ const DriverActivityList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["driver-activities", debouncedSearchTerm, nextPage],
+        queryKey: ["driver-activities", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -213,17 +213,17 @@ const DriverActivityList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["driver-activities", debouncedSearchTerm, prevPage])) {
+      if (!queryClient.getQueryData(["driver-activities", apiSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["driver-activities", debouncedSearchTerm, prevPage],
+          queryKey: ["driver-activities", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -241,7 +241,7 @@ const DriverActivityList = () => {
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, activitiesData?.last_page]);
+  }, [pagination.pageIndex, apiSearchTerm, queryClient, activitiesData?.last_page]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -372,8 +372,24 @@ const DriverActivityList = () => {
     },
   ];
 
+  const rawList = activitiesData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_full_name || ""} ${item.driver_mobile || ""} ${item.activity_name || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: activitiesData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -402,7 +418,7 @@ const DriverActivityList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["driver-activities", debouncedSearchTerm, targetPage]);
+    const cachedData = queryClient.getQueryData(["driver-activities", apiSearchTerm, targetPage]);
 
     if (cachedData) {
       setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));

@@ -3,7 +3,7 @@ import { useFetchVendors, useUpdateVendorStatus } from "@/features/Vendor/hooks/
 import VendorTable from "@/features/Vendor/components/vendor-table";
 import { useQueryClient } from "@tanstack/react-query";
 import Cookies from "js-cookie";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -12,7 +12,6 @@ const VendorList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
   const [togglingId, setTogglingId] = useState(null);
 
   const [pagination, setPagination] = useState({
@@ -72,24 +71,24 @@ const VendorList = () => {
     }
   }, [queryClient]);
 
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
+
   // Debounce search input
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   // Query Hook
   const {
@@ -97,10 +96,25 @@ const VendorList = () => {
     isFetching,
     isError,
     refetch,
-  } = useFetchVendors(debouncedSearchTerm, pagination.pageIndex, pagination.pageSize);
+  } = useFetchVendors(apiSearchTerm, pagination.pageIndex, pagination.pageSize);
 
   // Parse payload defensively
-  const vendorsList = vendorsPayload?.data?.data || vendorsPayload?.data || vendorsPayload || [];
+  const rawList = vendorsPayload?.data?.data || vendorsPayload?.data || vendorsPayload || [];
+  const vendorsList = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.vendor_name || ""} ${item.vendor_contact_person || ""} ${item.vendor_mobile || ""} ${item.vendor_email || ""} ${item.vendor_city || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const totalPages = vendorsPayload?.data?.last_page || vendorsPayload?.last_page || 1;
   const totalRecords = vendorsPayload?.data?.total || vendorsPayload?.total || vendorsList.length;
   const fromRecord = vendorsPayload?.data?.from || vendorsPayload?.from || (pagination.pageIndex * pagination.pageSize + 1);

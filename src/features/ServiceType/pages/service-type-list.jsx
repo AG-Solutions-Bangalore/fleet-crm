@@ -3,7 +3,7 @@ import { useFetchServiceTypes, useUpdateServiceTypeStatus } from "@/features/Ser
 import ServiceTypeTable from "@/features/ServiceType/components/service-type-table";
 import { useQueryClient } from "@tanstack/react-query";
 import Cookies from "js-cookie";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -12,7 +12,6 @@ const ServiceTypeList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
   const [togglingId, setTogglingId] = useState(null);
 
   const [pagination, setPagination] = useState({
@@ -70,32 +69,47 @@ const ServiceTypeList = () => {
     }
   }, [queryClient]);
 
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
+
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: serviceTypesPayload,
     isFetching,
     isError,
     refetch,
-  } = useFetchServiceTypes(debouncedSearchTerm, pagination.pageIndex, pagination.pageSize);
+  } = useFetchServiceTypes(apiSearchTerm, pagination.pageIndex, pagination.pageSize);
 
-  const serviceTypesList = serviceTypesPayload?.data?.data || serviceTypesPayload?.data || serviceTypesPayload || [];
+  const rawList = serviceTypesPayload?.data?.data || serviceTypesPayload?.data || serviceTypesPayload || [];
+  const serviceTypesList = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.service_name || ""} ${item.service_type || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const totalPages = serviceTypesPayload?.data?.last_page || serviceTypesPayload?.last_page || 1;
   const totalRecords = serviceTypesPayload?.data?.total || serviceTypesPayload?.total || serviceTypesList.length;
   const fromRecord = serviceTypesPayload?.data?.from || serviceTypesPayload?.from || (pagination.pageIndex * pagination.pageSize + 1);

@@ -71,7 +71,11 @@ const VehicleTravelList = () => {
   const keyDown = useNumericInput();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -103,7 +107,7 @@ const VehicleTravelList = () => {
     onSuccess: (data) => {
       toast.success(data.message || "Vehicle travel deleted successfully");
       queryClient.invalidateQueries({
-        queryKey: ["vehicle-travel", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["vehicle-travel", apiSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
       setSelectedId(null);
@@ -150,21 +154,16 @@ const VehicleTravelList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: vehicleTravelData,
@@ -173,15 +172,15 @@ const VehicleTravelList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["vehicle-travel", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["vehicle-travel", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(`${BASE_URL}/api/vehicle-travel?${params}`, {
@@ -277,15 +276,15 @@ const VehicleTravelList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["vehicle-travel", debouncedSearchTerm, nextPage],
+        queryKey: ["vehicle-travel", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -307,18 +306,18 @@ const VehicleTravelList = () => {
       const prevPage = currentPage - 1;
 
       if (
-        !queryClient.getQueryData(["vehicle-travel", debouncedSearchTerm, prevPage])
+        !queryClient.getQueryData(["vehicle-travel", apiSearchTerm, prevPage])
       ) {
         queryClient.prefetchQuery({
-          queryKey: ["vehicle-travel", debouncedSearchTerm, prevPage],
+          queryKey: ["vehicle-travel", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -338,7 +337,7 @@ const VehicleTravelList = () => {
     }
   }, [
     pagination.pageIndex,
-    debouncedSearchTerm,
+    apiSearchTerm,
     queryClient,
     vehicleTravelData?.last_page,
   ]);
@@ -522,8 +521,24 @@ const VehicleTravelList = () => {
     },
   ];
 
+  const rawList = vehicleTravelData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.vehicle_registration_no || ""} ${item.driver_name || ""} ${item.vehicle_type || ""} ${item.travel_type || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: vehicleTravelData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -554,7 +569,7 @@ const VehicleTravelList = () => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData([
       "vehicle-travel",
-      debouncedSearchTerm,
+      apiSearchTerm,
       targetPage,
     ]);
 

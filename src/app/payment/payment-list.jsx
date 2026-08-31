@@ -72,7 +72,11 @@ const PaymentList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
@@ -105,7 +109,7 @@ const PaymentList = () => {
       toast.success(data.message || "Payment deleted successfully");
       // Invalidate and refetch payments query
       queryClient.invalidateQueries({
-        queryKey: ["payments", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["payments", apiSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
       setSelectedPayment(null);
@@ -150,21 +154,16 @@ const PaymentList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: paymentsData,
@@ -173,15 +172,15 @@ const PaymentList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["payments", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["payments", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(`${BASE_URL}/api/payment?${params}`, {
@@ -276,15 +275,15 @@ const PaymentList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["payments", debouncedSearchTerm, nextPage],
+        queryKey: ["payments", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -306,18 +305,18 @@ const PaymentList = () => {
       const prevPage = currentPage - 1;
 
       if (
-        !queryClient.getQueryData(["payments", debouncedSearchTerm, prevPage])
+        !queryClient.getQueryData(["payments", apiSearchTerm, prevPage])
       ) {
         queryClient.prefetchQuery({
-          queryKey: ["payments", debouncedSearchTerm, prevPage],
+          queryKey: ["payments", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -337,7 +336,7 @@ const PaymentList = () => {
     }
   }, [
     pagination.pageIndex,
-    debouncedSearchTerm,
+    apiSearchTerm,
     queryClient,
     paymentsData?.last_page,
   ]);
@@ -593,8 +592,24 @@ const PaymentList = () => {
     },
   ];
 
+  const rawList = paymentsData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_full_name || ""} ${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_mobile || ""} ${item.driver_email || ""} ${item.payment_type || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: paymentsData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -625,7 +640,7 @@ const PaymentList = () => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData([
       "payments",
-      debouncedSearchTerm,
+      apiSearchTerm,
       targetPage,
     ]);
 

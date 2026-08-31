@@ -55,7 +55,7 @@ import {
   SquarePlus,
   Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import moment from "moment";
 import { toast } from "sonner";
@@ -64,8 +64,6 @@ const AlternateVehicleList = () => {
   const queryClient = useQueryClient();
   const keyDown = useNumericInput();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
@@ -77,16 +75,25 @@ const AlternateVehicleList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
 
   const token = Cookies.get("token");
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      if (searchTerm) setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      if (searchTerm !== debouncedSearchTerm) {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
+      }
     }, 500);
     return () => clearTimeout(timerId);
-  }, [searchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: listData,
@@ -97,14 +104,14 @@ const AlternateVehicleList = () => {
   } = useQuery({
     queryKey: [
       "alternate-rides",
-      debouncedSearchTerm,
+      apiSearchTerm,
       pagination.pageIndex + 1,
     ],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
-      if (debouncedSearchTerm) params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) params.append("search", apiSearchTerm);
 
       const response = await axios.get(
         `${BASE_URL}/api/vehicle-alternate-ride?${params}`,
@@ -273,8 +280,24 @@ const AlternateVehicleList = () => {
     },
   ];
 
+  const rawList = listData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_full_name || ""} ${item.driver_mobile || ""} ${item.vehicle_registration_no || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: listData?.data || [],
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

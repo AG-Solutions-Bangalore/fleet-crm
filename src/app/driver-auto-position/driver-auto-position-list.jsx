@@ -39,7 +39,7 @@ import {
 import axios from "axios";
 import Cookies from "js-cookie";
 import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Edit, Search, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import CreateDriverAutoPosition from "./create-driver-auto-position";
@@ -51,7 +51,11 @@ const DriverAutoPositionList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState(null);
 
@@ -91,7 +95,7 @@ const DriverAutoPositionList = () => {
       toast.success(data.message || "Driver auto position deleted successfully");
       // Invalidate and refetch positions query
       queryClient.invalidateQueries({
-        queryKey: ["driver-auto-positions", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["driver-auto-positions", apiSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
       setSelectedPosition(null);
@@ -136,20 +140,16 @@ const DriverAutoPositionList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
-        setPagination(prev => ({ ...prev, pageIndex: 0 }));
+      if (searchTerm !== debouncedSearchTerm) {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: autoPositionsData,
@@ -158,15 +158,15 @@ const DriverAutoPositionList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["driver-auto-positions", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["driver-auto-positions", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(
@@ -191,15 +191,15 @@ const DriverAutoPositionList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["driver-auto-positions", debouncedSearchTerm, nextPage],
+        queryKey: ["driver-auto-positions", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -220,17 +220,17 @@ const DriverAutoPositionList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["driver-auto-positions", debouncedSearchTerm, prevPage])) {
+      if (!queryClient.getQueryData(["driver-auto-positions", apiSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["driver-auto-positions", debouncedSearchTerm, prevPage],
+          queryKey: ["driver-auto-positions", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -248,7 +248,7 @@ const DriverAutoPositionList = () => {
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, autoPositionsData?.last_page]);
+  }, [pagination.pageIndex, apiSearchTerm, queryClient, autoPositionsData?.last_page]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -468,8 +468,24 @@ const DriverAutoPositionList = () => {
     },
   ];
 
+  const rawList = autoPositionsData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_name || ""} ${item.vehicle_registration_no || ""} ${item.auto_position_status || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: autoPositionsData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -498,7 +514,7 @@ const DriverAutoPositionList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["driver-auto-positions", debouncedSearchTerm, targetPage]);
+    const cachedData = queryClient.getQueryData(["driver-auto-positions", apiSearchTerm, targetPage]);
 
     if (cachedData) {
       setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));

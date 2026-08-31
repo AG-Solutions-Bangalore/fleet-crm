@@ -55,7 +55,7 @@ import {
   Search,
   SquarePlus,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const PenaltyList = () => {
@@ -64,7 +64,11 @@ const PenaltyList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState(null);
 
@@ -118,21 +122,16 @@ const PenaltyList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: penaltyData,
@@ -141,15 +140,15 @@ const PenaltyList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["penalties", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["penalties", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(
@@ -219,15 +218,15 @@ const PenaltyList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["penalties", debouncedSearchTerm, nextPage],
+        queryKey: ["penalties", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -249,18 +248,18 @@ const PenaltyList = () => {
       const prevPage = currentPage - 1;
 
       if (
-        !queryClient.getQueryData(["penalties", debouncedSearchTerm, prevPage])
+        !queryClient.getQueryData(["penalties", apiSearchTerm, prevPage])
       ) {
         queryClient.prefetchQuery({
-          queryKey: ["penalties", debouncedSearchTerm, prevPage],
+          queryKey: ["penalties", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -280,7 +279,7 @@ const PenaltyList = () => {
     }
   }, [
     pagination.pageIndex,
-    debouncedSearchTerm,
+    apiSearchTerm,
     queryClient,
     penaltyData?.last_page,
   ]);
@@ -447,8 +446,24 @@ const PenaltyList = () => {
     },
   ];
 
+  const rawList = penaltyData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_full_name || ""} ${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_mobile || ""} ${item.penalty_for || ""} ${item.penalty_type || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: penaltyData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -479,7 +494,7 @@ const PenaltyList = () => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData([
       "penalties",
-      debouncedSearchTerm,
+      apiSearchTerm,
       targetPage,
     ]);
 

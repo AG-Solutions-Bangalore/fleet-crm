@@ -45,7 +45,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const VehicleList = () => {
@@ -54,7 +54,11 @@ const VehicleList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -90,7 +94,7 @@ const VehicleList = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["vehicles", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["vehicles", apiSearchTerm, pagination.pageIndex + 1],
       });
     },
     onError: (error) => {
@@ -125,21 +129,16 @@ const VehicleList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: vehiclesData,
@@ -148,15 +147,15 @@ const VehicleList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["vehicles", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["vehicles", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(`${BASE_URL}/api/vehicle?${params}`, {
@@ -178,15 +177,15 @@ const VehicleList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["vehicles", debouncedSearchTerm, nextPage],
+        queryKey: ["vehicles", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -208,18 +207,18 @@ const VehicleList = () => {
       const prevPage = currentPage - 1;
 
       if (
-        !queryClient.getQueryData(["vehicles", debouncedSearchTerm, prevPage])
+        !queryClient.getQueryData(["vehicles", apiSearchTerm, prevPage])
       ) {
         queryClient.prefetchQuery({
-          queryKey: ["vehicles", debouncedSearchTerm, prevPage],
+          queryKey: ["vehicles", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -239,7 +238,7 @@ const VehicleList = () => {
     }
   }, [
     pagination.pageIndex,
-    debouncedSearchTerm,
+    apiSearchTerm,
     queryClient,
     vehiclesData?.last_page,
   ]);
@@ -448,8 +447,24 @@ const VehicleList = () => {
     },
   ];
 
+  const rawList = vehiclesData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.vehicle_registration_no || ""} ${item.vehicle_model || ""} ${item.vehicle_chassis_no || ""} ${item.vehicle_engine_no || ""} ${item.vehicle_driver || ""} ${item.vehicle_company_name || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: vehiclesData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -480,7 +495,7 @@ const VehicleList = () => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData([
       "vehicles",
-      debouncedSearchTerm,
+      apiSearchTerm,
       targetPage,
     ]);
 

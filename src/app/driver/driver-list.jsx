@@ -45,7 +45,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import ImageCell from "@/components/common/ImageCell";
 import { getImageBaseUrl, getNoImageUrl } from "@/utils/imageUtils";
@@ -136,6 +136,11 @@ const DriverList = () => {
     };
   }, [searchTerm, searchQuery, setSearchParams]);
 
+  const apiSearchTerm = useMemo(() => {
+    if (!searchQuery.trim()) return "";
+    return searchQuery.trim().split(/\s+/)[0];
+  }, [searchQuery]);
+
   const {
     data: driversPayload,
     isLoading,
@@ -143,14 +148,14 @@ const DriverList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["drivers", searchQuery, currentPage],
+    queryKey: ["drivers", apiSearchTerm, currentPage],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams();
       params.append("page", currentPage.toString());
 
-      if (searchQuery) {
-        params.append("search", searchQuery);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(`${BASE_URL}/api/driver?${params}`, {
@@ -178,15 +183,15 @@ const DriverList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["drivers", searchQuery, nextPage],
+        queryKey: ["drivers", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (searchQuery) {
-            params.append("search", searchQuery);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(`${BASE_URL}/api/driver?${params}`, {
@@ -204,17 +209,17 @@ const DriverList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["drivers", searchQuery, prevPage])) {
+      if (!queryClient.getQueryData(["drivers", apiSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["drivers", searchQuery, prevPage],
+          queryKey: ["drivers", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (searchQuery) {
-              params.append("search", searchQuery);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -234,7 +239,7 @@ const DriverList = () => {
     }
   }, [
     currentPage,
-    searchQuery,
+    apiSearchTerm,
     queryClient,
     driversData?.last_page,
   ]);
@@ -474,8 +479,24 @@ const DriverList = () => {
     },
   ];
 
+  const rawList = driversData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!searchQuery.trim()) return rawList;
+    const words = searchQuery
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_full_name || ""} ${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_mobile || ""} ${item.driver_email || ""} ${item.driver_duty_status || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, searchQuery]);
+
   const table = useReactTable({
-    data: driversData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

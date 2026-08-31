@@ -65,7 +65,11 @@ const DailyCashList = () => {
   const keyDown = useNumericInput();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -100,7 +104,7 @@ const DailyCashList = () => {
     onSuccess: (data) => {
       toast.success(data.message || "Daily cash deleted successfully");
       queryClient.invalidateQueries({
-        queryKey: ["daily-cash", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["daily-cash", apiSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
       setSelectedId(null);
@@ -145,20 +149,16 @@ const DailyCashList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch = searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
-        setPagination(prev => ({ ...prev, pageIndex: 0 }));
+      if (searchTerm !== debouncedSearchTerm) {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: dailyCashData,
@@ -167,15 +167,15 @@ const DailyCashList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["daily-cash", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["daily-cash", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(
@@ -273,15 +273,15 @@ const DailyCashList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["daily-cash", debouncedSearchTerm, nextPage],
+        queryKey: ["daily-cash", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(
@@ -302,17 +302,17 @@ const DailyCashList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["daily-cash", debouncedSearchTerm, prevPage])) {
+      if (!queryClient.getQueryData(["daily-cash", apiSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["daily-cash", debouncedSearchTerm, prevPage],
+          queryKey: ["daily-cash", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(
@@ -330,7 +330,7 @@ const DailyCashList = () => {
         });
       }
     }
-  }, [pagination.pageIndex, debouncedSearchTerm, queryClient, dailyCashData?.last_page]);
+  }, [pagination.pageIndex, apiSearchTerm, queryClient, dailyCashData?.last_page]);
 
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -512,8 +512,24 @@ const DailyCashList = () => {
     },
   ];
 
+  const rawList = dailyCashData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_full_name || ""} ${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_mobile || ""} ${item.driver_email || ""} ${item.vehicle_registration_no || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: dailyCashData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -542,7 +558,7 @@ const DailyCashList = () => {
 
   const handlePageChange = (newPageIndex) => {
     const targetPage = newPageIndex + 1;
-    const cachedData = queryClient.getQueryData(["daily-cash", debouncedSearchTerm, targetPage]);
+    const cachedData = queryClient.getQueryData(["daily-cash", apiSearchTerm, targetPage]);
 
     if (cachedData) {
       setPagination(prev => ({ ...prev, pageIndex: newPageIndex }));

@@ -72,7 +72,11 @@ const TripList = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [previousSearchTerm, setPreviousSearchTerm] = useState("");
+
+  const apiSearchTerm = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return "";
+    return debouncedSearchTerm.trim().split(/\s+/)[0];
+  }, [debouncedSearchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
 
@@ -110,7 +114,7 @@ const TripList = () => {
       toast.success(data.message || "Trip deleted successfully");
       // Invalidate and refetch trips query
       queryClient.invalidateQueries({
-        queryKey: ["trips", debouncedSearchTerm, pagination.pageIndex + 1],
+        queryKey: ["trips", apiSearchTerm, pagination.pageIndex + 1],
       });
       setDeleteDialogOpen(false);
       setSelectedTrip(null);
@@ -156,21 +160,16 @@ const TripList = () => {
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      const isNewSearch =
-        searchTerm !== previousSearchTerm && previousSearchTerm !== "";
-
-      if (isNewSearch) {
+      if (searchTerm !== debouncedSearchTerm) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setDebouncedSearchTerm(searchTerm);
       }
-
-      setDebouncedSearchTerm(searchTerm);
-      setPreviousSearchTerm(searchTerm);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [searchTerm, previousSearchTerm]);
+  }, [searchTerm, debouncedSearchTerm]);
 
   const {
     data: responseData,
@@ -179,15 +178,15 @@ const TripList = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ["trips", debouncedSearchTerm, pagination.pageIndex + 1],
+    queryKey: ["trips", apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
 
-      if (debouncedSearchTerm) {
-        params.append("search", debouncedSearchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
 
       const response = await axios.get(`${BASE_URL}/api/trip?${params}`, {
@@ -276,15 +275,15 @@ const TripList = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
       queryClient.prefetchQuery({
-        queryKey: ["trips", debouncedSearchTerm, nextPage],
+        queryKey: ["trips", apiSearchTerm, nextPage],
         queryFn: async () => {
           const token = Cookies.get("token");
           const params = new URLSearchParams({
             page: nextPage.toString(),
           });
 
-          if (debouncedSearchTerm) {
-            params.append("search", debouncedSearchTerm);
+          if (apiSearchTerm) {
+            params.append("search", apiSearchTerm);
           }
 
           const response = await axios.get(`${BASE_URL}/api/trip?${params}`, {
@@ -302,17 +301,17 @@ const TripList = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
 
-      if (!queryClient.getQueryData(["trips", debouncedSearchTerm, prevPage])) {
+      if (!queryClient.getQueryData(["trips", apiSearchTerm, prevPage])) {
         queryClient.prefetchQuery({
-          queryKey: ["trips", debouncedSearchTerm, prevPage],
+          queryKey: ["trips", apiSearchTerm, prevPage],
           queryFn: async () => {
             const token = Cookies.get("token");
             const params = new URLSearchParams({
               page: prevPage.toString(),
             });
 
-            if (debouncedSearchTerm) {
-              params.append("search", debouncedSearchTerm);
+            if (apiSearchTerm) {
+              params.append("search", apiSearchTerm);
             }
 
             const response = await axios.get(`${BASE_URL}/api/trip?${params}`, {
@@ -329,7 +328,7 @@ const TripList = () => {
     }
   }, [
     pagination.pageIndex,
-    debouncedSearchTerm,
+    apiSearchTerm,
     queryClient,
     tripsData?.last_page,
   ]);
@@ -602,8 +601,24 @@ const TripList = () => {
     },
   ];
 
+  const rawList = tripsData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return rawList;
+    const words = debouncedSearchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.trip_driver_full_name || ""} ${item.trip_driver_name || ""} ${item.trip_driver_surname || ""} ${item.trip_driver_mobile || ""} ${item.trip_driver_email || ""} ${item.trip_vehicle_plate_number || ""} ${item.trip_status || ""} ${item.trip_type || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, debouncedSearchTerm]);
+
   const table = useReactTable({
-    data: tripsData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -634,7 +649,7 @@ const TripList = () => {
     const targetPage = newPageIndex + 1;
     const cachedData = queryClient.getQueryData([
       "trips",
-      debouncedSearchTerm,
+      apiSearchTerm,
       targetPage,
     ]);
 

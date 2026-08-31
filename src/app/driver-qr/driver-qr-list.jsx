@@ -52,6 +52,15 @@ const DriverQrTable = ({ apiEndpoint, queryKey, searchTerm, onSearchChange, colu
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
 
+  const apiSearchTerm = useMemo(() => {
+    if (!searchTerm?.trim()) return "";
+    return searchTerm.trim().split(/\s+/)[0];
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [searchTerm]);
+
   const {
     data: listData,
     isLoading,
@@ -59,14 +68,14 @@ const DriverQrTable = ({ apiEndpoint, queryKey, searchTerm, onSearchChange, colu
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: [queryKey, searchTerm, pagination.pageIndex + 1],
+    queryKey: [queryKey, apiSearchTerm, pagination.pageIndex + 1],
     queryFn: async () => {
       const token = Cookies.get("token");
       const params = new URLSearchParams({
         page: (pagination.pageIndex + 1).toString(),
       });
-      if (searchTerm) {
-        params.append("search", searchTerm);
+      if (apiSearchTerm) {
+        params.append("search", apiSearchTerm);
       }
       const response = await axios.get(`${BASE_URL}/api/${apiEndpoint}?${params}`, {
         headers: {
@@ -77,11 +86,27 @@ const DriverQrTable = ({ apiEndpoint, queryKey, searchTerm, onSearchChange, colu
       return response.data.data;
     },
     keepPreviousData: true,
-    staleTime: 1000, // Reduced staleTime for faster updates
+    staleTime: 1000,
   });
 
+  const rawList = listData?.data || [];
+  const filteredData = useMemo(() => {
+    if (!searchTerm?.trim()) return rawList;
+    const words = searchTerm
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length <= 1) return rawList;
+
+    return rawList.filter((item) => {
+      const searchCorpus = `${item.driver_qr_fullname || ""} ${item.merchant_id || ""} ${item.driver_qr_UUID || ""} ${item.driver_qr_status || ""}`.toLowerCase();
+      return words.every((word) => searchCorpus.includes(word));
+    });
+  }, [rawList, searchTerm]);
+
   const table = useReactTable({
-    data: listData?.data || [],
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
