@@ -92,7 +92,7 @@ const DriverList = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["drivers", searchQuery, currentPage],
+        queryKey: ["drivers"],
       });
     },
     onError: (error) => {
@@ -490,7 +490,19 @@ const DriverList = () => {
     if (words.length <= 1) return rawList;
 
     return rawList.filter((item) => {
-      const searchCorpus = `${item.driver_full_name || ""} ${item.driver_name || ""} ${item.driver_surname || ""} ${item.driver_mobile || ""} ${item.driver_email || ""} ${item.driver_duty_status || ""}`.toLowerCase();
+      const searchCorpus = [
+        item.full_name,
+        item.name,
+        item.surname,
+        item.mobile,
+        item.email,
+        item.UUID,
+        item.aadhar_no,
+        item.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return words.every((word) => searchCorpus.includes(word));
     });
   }, [rawList, searchQuery]);

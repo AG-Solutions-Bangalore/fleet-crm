@@ -160,11 +160,21 @@ const EditVehicle = () => {
   });
 
   useEffect(() => {
-    const isDirty =
-      vehicle.vehicle_product_type !== initialVehicle.vehicle_product_type ||
-      vehicle.vehicle_status !== initialVehicle.vehicle_status;
+    const fieldsToTrack = [
+      "vehicle_uuid",
+      "vehicle_number_plate",
+      "vehicle_product_type",
+      "vehicle_status",
+      "vehicle_variant",
+      "merchant_id",
+      "vehicle_umbrella",
+      "vehicle_tissue_box",
+    ];
+    const isDirty = fieldsToTrack.some(
+      (field) => (vehicle[field] || "") !== (initialVehicle[field] || ""),
+    );
     setIsFormDirty(isDirty);
-  }, [vehicle.vehicle_product_type, vehicle.vehicle_status, initialVehicle]);
+  }, [vehicle, initialVehicle]);
 
   const onInputChange = (e) => {
     const { name, value } = e.target;
@@ -198,10 +208,10 @@ const EditVehicle = () => {
   };
 
   const updateVehicleMutation = useMutation({
-    mutationFn: async (formData) => {
+    mutationFn: async (payload) => {
       const response = await axios.put(
         `${BASE_URL}/api/vehicle/${id}`,
-        formData,
+        payload,
         {
           headers: {
             "Content-Type": "application/json",
@@ -212,7 +222,7 @@ const EditVehicle = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      if (data.code === 201) {
+      if (data.code === 201 || data.code === 200) {
         queryClient.invalidateQueries(["vehicles"]);
         toast.success(data.message || "Vehicle Updated Successfully");
         navigate("/vehicle");
@@ -369,18 +379,19 @@ const EditVehicle = () => {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("vehicle_uuid", vehicle.vehicle_uuid || "");
-    formData.append("vehicle_number_plate", vehicle.vehicle_number_plate || "");
-    formData.append("vehicle_product_type", vehicle.vehicle_product_type || "");
-    formData.append("vehicle_status", vehicle.vehicle_status || "");
-    formData.append("vehicle_variant", vehicle.vehicle_variant || "");
-    formData.append("merchant_id", vehicle.merchant_id || "");
-    formData.append("vehicle_umbrella", vehicle.vehicle_umbrella || "");
-    formData.append("vehicle_tissue_box", vehicle.vehicle_tissue_box || "");
+    const payload = {
+      vehicle_uuid: vehicle.vehicle_uuid || "",
+      vehicle_number_plate: vehicle.vehicle_number_plate || "",
+      vehicle_product_type: vehicle.vehicle_product_type || "",
+      vehicle_status: vehicle.vehicle_status || "",
+      vehicle_variant: vehicle.vehicle_variant || "",
+      merchant_id: vehicle.merchant_id || "",
+      vehicle_umbrella: vehicle.vehicle_umbrella || "",
+      vehicle_tissue_box: vehicle.vehicle_tissue_box || "",
+    };
 
     setIsButtonDisabled(true);
-    updateVehicleMutation.mutate(formData);
+    updateVehicleMutation.mutate(payload);
   };
 
   if (isLoading) {
